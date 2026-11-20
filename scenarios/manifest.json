@@ -1,0 +1,74 @@
+[
+  {
+    "name": "01-movement-pickup-deposit",
+    "note": "walks +Z at exactly player_speed, picks 3 motes at pickup_radius, deposits them and lights L1",
+    "seed": 7,
+    "ticks": 260,
+    "snapshotEvery": 20,
+    "scenario": "01-movement-pickup-deposit.scenario.json",
+    "inputs": "01-movement-pickup-deposit.inputs.json"
+  },
+  {
+    "name": "02-win-all-lit",
+    "note": "lighting the fifth lantern ends the night with won/all_lit and stops early",
+    "seed": 11,
+    "ticks": 30,
+    "snapshotEvery": 10,
+    "scenario": "02-win-all-lit.scenario.json",
+    "inputs": "02-win-all-lit.inputs.json"
+  },
+  {
+    "name": "03-pulse-stuns-shade",
+    "note": "pulse stuns S1, pushes it pulse_push_m away, then the stun expires and it chases again",
+    "seed": 3,
+    "ticks": 200,
+    "snapshotEvery": 10,
+    "scenario": "03-pulse-stuns-shade.scenario.json",
+    "inputs": "03-pulse-stuns-shade.inputs.json"
+  },
+  {
+    "name": "04-ink-hit-drops-light",
+    "note": "a touch costs one flame and drops hit_drop_ratio of the bag; invuln_s spaces the next hit 90 ticks later",
+    "seed": 5,
+    "ticks": 120,
+    "snapshotEvery": 10,
+    "scenario": "04-ink-hit-drops-light.scenario.json",
+    "inputs": "04-ink-hit-drops-light.inputs.json"
+  },
+  {
+    "name": "05-dawn-lost",
+    "note": "running out of night time ends the run with lost/dawn at exactly time_left_s",
+    "seed": 2,
+    "ticks": 200,
+    "snapshotEvery": 10,
+    "scenario": "05-dawn-lost.scenario.json",
+    "inputs": "05-dawn-lost.inputs.json"
+  },
+  {
+    "name": "06-safe-haven",
+    "note": "a lit lantern keeps Bóng Mực outside safe_radius, so the player cannot be touched",
+    "seed": 4,
+    "ticks": 120,
+    "snapshotEvery": 20,
+    "scenario": "06-safe-haven.scenario.json",
+    "inputs": "06-safe-haven.inputs.json"
+  },
+  {
+    "name": "07-default-island",
+    "note": "the shipped Night 1 with random motes and random shade spawns (tick 360 and 960)",
+    "seed": 12,
+    "ticks": 1080,
+    "snapshotEvery": 120,
+    "scenario": null,
+    "inputs": null
+  },
+  {
+    "name": "08-invalid-scenario",
+    "note": "a malformed scenario file must exit 2 with a message on stderr",
+    "seed": 1,
+    "ticks": 10,
+    "scenario": "invalid.scenario.json",
+    "inputs": null,
+    "expectExit": 2
+  }
+]
