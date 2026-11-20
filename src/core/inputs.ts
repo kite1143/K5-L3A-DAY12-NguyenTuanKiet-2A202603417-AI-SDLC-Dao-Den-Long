@@ -5,9 +5,9 @@ import type { InputFrame } from './scenario';
  * Replays an `--inputs` file as a per-tick stream.
  *
  * Contract rules honoured here:
- *  - defaults before the first frame: move [0,0], cam_yaw_deg 0, all buttons false;
+ *  - defaults before the first frame: move [0,0], cam_yaw_deg 0, every button false;
  *  - a frame only changes the fields it contains;
- *  - `jump` / `interact` / `pulse` fire on the false -> true transition.
+ *  - `jump`, `interact`, `pulse`, `dash` and `pause` fire on the false -> true edge.
  */
 export class InputTimeline {
   private readonly frames: InputFrame[];
@@ -19,6 +19,8 @@ export class InputTimeline {
   private jump = false;
   private interact = false;
   private pulse = false;
+  private dash = false;
+  private pause = false;
 
   constructor(frames: InputFrame[] = []) {
     this.frames = frames;
@@ -26,9 +28,13 @@ export class InputTimeline {
 
   /** Resolved input for `tick` (the tick whose state is read by that step). */
   at(tick: number): ResolvedInput {
-    const prevJump = this.jump;
-    const prevInteract = this.interact;
-    const prevPulse = this.pulse;
+    const prev = {
+      jump: this.jump,
+      interact: this.interact,
+      pulse: this.pulse,
+      dash: this.dash,
+      pause: this.pause,
+    };
 
     while (this.index < this.frames.length && this.frames[this.index].tick <= tick) {
       const f = this.frames[this.index];
@@ -39,6 +45,8 @@ export class InputTimeline {
       if (f.jump !== undefined) this.jump = f.jump;
       if (f.interact !== undefined) this.interact = f.interact;
       if (f.pulse !== undefined) this.pulse = f.pulse;
+      if (f.dash !== undefined) this.dash = f.dash;
+      if (f.pause !== undefined) this.pause = f.pause;
     }
 
     return {
@@ -46,9 +54,11 @@ export class InputTimeline {
       moveZ: this.moveZ,
       yawDeg: this.yawDeg,
       pressed: {
-        jump: this.jump && !prevJump,
-        interact: this.interact && !prevInteract,
-        pulse: this.pulse && !prevPulse,
+        jump: this.jump && !prev.jump,
+        interact: this.interact && !prev.interact,
+        pulse: this.pulse && !prev.pulse,
+        dash: this.dash && !prev.dash,
+        pause: this.pause && !prev.pause,
       },
     };
   }

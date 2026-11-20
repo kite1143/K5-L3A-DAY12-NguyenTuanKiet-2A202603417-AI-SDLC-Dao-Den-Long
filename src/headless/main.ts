@@ -1,5 +1,5 @@
 /**
- * Headless runner for Test Contract v1.0.
+ * Headless runner for Test Contract v1.1.
  *
  *   node dist/headless/main.js --seed 1 --night 1 --ticks 600 --out out.jsonl
  *       [--scenario scenario.json] [--inputs inputs.json] [--snapshot-every 10]
@@ -10,9 +10,9 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ContractFormatError, parseInputs, parseScenario } from '../core/scenario';
 import type { InputsInput, ScenarioInput } from '../core/scenario';
+import type { NightId } from '../core/nights';
 import { runSimulation } from '../core/runner';
 
-/** What the command line may leave out. */
 interface RawArgs {
   seed: number;
   night: number;
@@ -23,10 +23,9 @@ interface RawArgs {
   snapshotEvery: number;
 }
 
-/** What survives validation: the required flags are known to be present. */
 interface CliArgs {
   seed: number;
-  night: number;
+  night: NightId;
   ticks: number;
   out: string;
   scenario: string | null;
@@ -92,12 +91,14 @@ function parseArgs(argv: string[]): CliArgs {
   if (args.out === null) throw new UsageError('--out is required');
   if (args.ticks < 0) throw new UsageError('--ticks must be >= 0');
   if (args.snapshotEvery < 1) throw new UsageError('--snapshot-every must be >= 1');
-  if (args.night !== 1) throw new UsageError(`unsupported --night ${args.night} (Phase 1 ships night 1 only)`);
+  if (args.night !== 1 && args.night !== 2 && args.night !== 3) {
+    throw new UsageError(`unsupported --night ${args.night} (contract v1.1 ships nights 1, 2 and 3)`);
+  }
   if (args.seed < 0) throw new UsageError('--seed must be >= 0');
 
   return {
     seed: args.seed,
-    night: args.night,
+    night: args.night as NightId,
     ticks: args.ticks,
     out: args.out,
     scenario: args.scenario,
