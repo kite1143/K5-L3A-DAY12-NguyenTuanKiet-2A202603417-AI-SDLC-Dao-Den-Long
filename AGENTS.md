@@ -11,6 +11,7 @@ npm test               # 67 test (node:test), phải xanh trước khi commit
 npm run verify         # build + test + scenario + tất định → docs/proof/<phase>/
 npm run headless -- --seed 1 --night 1 --ticks 600 --out out.jsonl [--scenario f] [--inputs f]
 npm run dev            # http://localhost:5173 (nạp lại khi sửa)
+npm run assets         # tải lại prop trong public/models (cần mạng + polyfork)
 ```
 
 Chạy bot chơi thật để chụp ảnh bằng chứng (cần cài thêm, không nằm trong dependencies):
@@ -35,6 +36,7 @@ node scripts/shots.mjs http://localhost:5173/ docs/proof/phase-N/screens <seed>
 4. **Mỗi yêu cầu mới phải có test trước, bằng chứng sau.** Không có output thật trong `docs/proof/` thì coi như chưa xong.
 5. **Yêu cầu mới làm sai test cũ thì sửa hoặc bỏ test kèm lý do**, ghi vào `CHANGELOG.md` và `docs/notes/`, không được xoá âm thầm.
 6. Không commit `.env`, API key, token. Assets ngoài chỉ nhận CC0/CC-BY/MIT và phải ghi vào `CREDITS.md`.
+7. **Asset 3D chỉ nằm ở `public/models/` và chỉ được `src/render/**` import.** Chỉ nhận mesh file có giấy phép cho phép phân phối lại; riêng Polyfork thì lấy `.glb` theo CC BY 4.0 và ghi credit, **không** lấy `.mjs` (không thuộc CC BY). `src/core` và `src/headless` không được biết asset tồn tại.
 
 ## Bẫy đã gặp (đừng lặp lại)
 
@@ -47,6 +49,9 @@ node scripts/shots.mjs http://localhost:5173/ docs/proof/phase-N/screens <seed>
 | Cây/đá mọc giữa sân che camera | Trang trí lớn chỉ đặt ở vành đảo (bán kính ≥ 19 m) |
 | `A`/`D` đi ngược hướng màn hình: camera nhìn về `+Z` nên **phải màn hình là `-X`** | Đảo dấu trục X ở lớp input (`src/render/input.ts`), không sửa `src/core`; bot trong `scripts/shots.mjs` có kiểm tra hướng ở hai góc camera |
 | Đo chuyển động bằng bot ở headless Chromium (SwiftShader ~5–10 fps) dễ ra 0 m nếu giữ phím quá ngắn | Giữ phím ≥ 900 ms rồi chờ thêm ≥ 450 ms trước khi đọc trạng thái |
+| `npm install <pkg>` sẽ **prune** các package cài bằng `--no-save` (playwright biến mất giữa phiên) | Cài lại `npm i --no-save playwright` sau mỗi lần thêm dependency, hoặc thêm dependency trước rồi mới chụp ảnh |
+| Model ngoài có đơn vị và gốc toạ độ khác nhau (mét, cm, gốc ở đáy hay giữa) | `placeProp()` scale theo chiều cao mong muốn rồi dời đáy về y = 0; không đặt thủ công bằng mắt |
+| Thêm asset làm headless chậm/lệch | Asset chỉ được import từ `src/render/**`; test đối chiếu `dist/headless/main.js` với `src/` sẽ bắt nếu ai đó import nhầm |
 
 ## Quy ước commit
 

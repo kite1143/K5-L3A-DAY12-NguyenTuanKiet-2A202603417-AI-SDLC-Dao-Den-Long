@@ -1,5 +1,18 @@
 # Changelog
 
+## Chưa phát hành (sau `phase-1`)
+
+### Thêm
+- **Prop cảnh vật low-poly** từ Polyfork (CC BY 4.0): thông, đá, túp lều của người giữ bến, thuyền mộc, đèn lồng lớn, nấm phát sáng. Tất cả nằm trong `public/models/` và được credit đầy đủ ở `CREDITS.md`.
+- `src/render/assets.ts`: tải GLB bằng `GLTFLoader`, chuẩn hoá kích thước theo chiều cao mong muốn và đặt đáy về mặt đất; **tải lỗi thì trả `null`** và cảnh quay về mesh thủ tục, nên repo vẫn chạy khi offline hay thiếu file.
+- `scripts/fetch-assets.mjs` + `npm run assets` để tải lại đúng danh sách model (id nằm trong script, credit nằm trong `PROP_CREDITS`).
+- Màn "Đang tải đảo…" trong lúc nạp asset.
+
+### Ghi chú
+- Nhân vật Mây **vẫn** là hình học tự dựng: PRD-0 bắt buộc "nón lá có treo một chiếc đèn lồng nhỏ", không có mô hình ngoài nào khớp.
+- Chỉ tải mesh file `.glb`; file `.mjs` của Polyfork **không** thuộc CC BY nên không dùng.
+- Asset chỉ tồn tại ở lớp render → `npm run verify` vẫn PASS nguyên trạng (67 test, 8 scenario, tất định).
+
 ## Phase 1 — PRD-0 + Test Contract v1.0
 
 ### Sửa

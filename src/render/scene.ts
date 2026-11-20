@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { ISLAND_RADIUS, TUNING } from '../core/index';
+import { placeProp } from './assets';
+import type { PropSet } from './assets';
 import { glowSprite } from './textures';
 
 /**
@@ -16,7 +18,7 @@ export interface Stage {
   resize(aspect: number): void;
 }
 
-export function createStage(): Stage {
+export function createStage(props: PropSet = {}): Stage {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x080d18);
   scene.fog = new THREE.FogExp2(0x0a1020, 0.011);
@@ -105,15 +107,27 @@ export function createStage(): Stage {
   scene.add(keel);
 
   // --- props: rocks and pines ---------------------------------------------
+  // Polyfork models (CC BY 4.0, credit in CREDITS.md) win when present; the
+  // procedural shapes stay as the fallback so the island is never empty.
   const rockMaterial = new THREE.MeshStandardMaterial({ color: 0x2e3b3b, roughness: 1, flatShading: true });
   const rockGeometry = new THREE.DodecahedronGeometry(1, 0);
+  const rockSources = [props.rockLarge, props.rockSmall].filter((s): s is THREE.Object3D => Boolean(s));
   for (let i = 0; i < 26; i += 1) {
     const angle = (i / 26) * Math.PI * 2 + (i % 3) * 0.11;
     const radius = 6 + ((i * 37) % 190) / 10;
-    const scale = 0.5 + ((i * 53) % 90) / 100;
+    const height = 0.7 + ((i * 53) % 90) / 100;
+
+    const model = rockSources.length > 0 ? placeProp(rockSources[i % rockSources.length], height) : null;
+    if (model) {
+      model.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+      model.rotation.y = i * 1.7;
+      scene.add(model);
+      continue;
+    }
+
     const rock = new THREE.Mesh(rockGeometry, rockMaterial);
-    rock.position.set(Math.cos(angle) * radius, scale * 0.35, Math.sin(angle) * radius);
-    rock.scale.setScalar(scale);
+    rock.position.set(Math.cos(angle) * radius, height * 0.35, Math.sin(angle) * radius);
+    rock.scale.setScalar(height);
     rock.rotation.set(i, i * 2, i * 0.5);
     scene.add(rock);
   }
@@ -121,11 +135,23 @@ export function createStage(): Stage {
   const trunkMaterial = new THREE.MeshStandardMaterial({ color: 0x3a2a1e, roughness: 1 });
   const leafMaterial = new THREE.MeshStandardMaterial({ color: 0x2b5142, roughness: 1, flatShading: true });
   const swaying: THREE.Group[] = [];
-  for (let i = 0; i < 16; i += 1) {
-    const angle = (i / 16) * Math.PI * 2 + 0.4;
+  const treeSources = [props.tallPine, props.youngPine].filter((s): s is THREE.Object3D => Boolean(s));
+  for (let i = 0; i < 18; i += 1) {
+    const angle = (i / 18) * Math.PI * 2 + 0.4;
     // Pines stay on the outer shore so they never block the camera in the
     // middle of the island.
     const radius = 19.5 + ((i * 61) % 60) / 10;
+    const height = 5.2 + ((i * 37) % 26) / 10;
+
+    const model = treeSources.length > 0 ? placeProp(treeSources[i % treeSources.length], height) : null;
+    if (model) {
+      model.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+      model.rotation.y = angle * 1.9 + i;
+      scene.add(model);
+      swaying.push(model);
+      continue;
+    }
+
     const tree = new THREE.Group();
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.22, 1.4, 6), trunkMaterial);
     trunk.position.y = 0.7;
@@ -138,11 +164,39 @@ export function createStage(): Stage {
       cone.position.y = 1.5 + layer * 0.62;
       tree.add(cone);
     }
-    const scale = 0.78 + ((i * 29) % 45) / 100;
-    tree.scale.setScalar(scale);
+    tree.scale.setScalar(height / 4.6);
     tree.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
     scene.add(tree);
     swaying.push(tree);
+  }
+
+  // Đảo Bến is a harbour island: one hut and one beached rowboat tell that
+  // story without touching gameplay.
+  const hut = placeProp(props.hut, 3.6);
+  if (hut) {
+    const angle = 2.45;
+    hut.position.set(Math.cos(angle) * 21.5, 0, Math.sin(angle) * 21.5);
+    hut.rotation.y = Math.atan2(-hut.position.x, -hut.position.z) + 0.3;
+    scene.add(hut);
+  }
+
+  const boat = placeProp(props.boat, 1.15);
+  if (boat) {
+    const angle = 4.35;
+    boat.position.set(Math.cos(angle) * 24.2, 0, Math.sin(angle) * 24.2);
+    boat.rotation.y = angle + 1.1;
+    scene.add(boat);
+  }
+
+  // Glowing bonnet mushrooms along the inner grass.
+  for (let i = 0; i < 16; i += 1) {
+    const angle = (i / 16) * Math.PI * 2 + 1.1;
+    const radius = 11 + ((i * 47) % 120) / 10;
+    const mushroom = placeProp(props.mushroom, 0.32 + ((i * 23) % 30) / 100);
+    if (!mushroom) break;
+    mushroom.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+    mushroom.rotation.y = i * 1.3;
+    scene.add(mushroom);
   }
 
   // --- sea of clouds -------------------------------------------------------

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { createWorld, stepWorld, TUNING } from '../core/index';
 import type { SimEvent, World } from '../core/index';
+import { loadProps } from './assets';
 import { Sfx } from './audio';
 import { GameView } from './entities';
 import { Hud } from './hud';
@@ -11,6 +12,13 @@ import './style.css';
 const app = document.getElementById('app');
 if (!app) throw new Error('#app is missing from index.html');
 
+// Exterior props (Polyfork, CC BY 4.0). Loading never rejects: a missing file
+// just leaves the procedural stand-in in place.
+const props = await loadProps((loaded, total) => {
+  const boot = document.getElementById('boot');
+  if (boot) boot.textContent = `Đang tải đảo… ${loaded}/${total}`;
+});
+
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -18,9 +26,10 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.18;
 renderer.domElement.className = 'game-canvas';
 app.appendChild(renderer.domElement);
+document.getElementById('boot')?.remove();
 
-const stage = createStage();
-const view = new GameView(stage);
+const stage = createStage(props);
+const view = new GameView(stage, props);
 const sfx = new Sfx();
 
 let world: World = createWorld(randomSeed(), null);

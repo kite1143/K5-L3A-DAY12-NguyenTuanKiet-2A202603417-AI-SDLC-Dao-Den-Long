@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { TUNING } from '../core/index';
 import type { World } from '../core/index';
+import { placeProp } from './assets';
+import type { PropSet } from './assets';
 import type { Stage } from './scene';
 import { glowSprite } from './textures';
 
@@ -49,7 +51,10 @@ export class GameView {
   private lastZ = 0;
   private walkPhase = 0;
 
-  constructor(private readonly stage: Stage) {
+  constructor(
+    private readonly stage: Stage,
+    private readonly props: PropSet = {},
+  ) {
     stage.scene.add(this.root);
 
     const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -189,8 +194,15 @@ export class GameView {
     const hook = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.3, 6), wood);
     hook.position.set(0.82, 4.11, 0);
 
+    // The housing is Polyfork's Spirit Lantern (CC BY 4.0, see CREDITS.md) when
+    // the model loaded; the carved sphere below is the fallback body. Either
+    // way `glass` stays the small emissive core, so the lit/unlit state is
+    // driven by our own material rather than by the shared model materials.
+    const housing = placeProp(this.props.lantern, 1.5);
+    const coreRadius = housing ? 0.3 : 0.42;
+
     const glass = new THREE.Mesh(
-      new THREE.SphereGeometry(0.42, 20, 16),
+      new THREE.SphereGeometry(coreRadius, 20, 16),
       new THREE.MeshStandardMaterial({
         color: 0x6a5236,
         emissive: 0x4a2f0e,
@@ -200,17 +212,23 @@ export class GameView {
         opacity: 0.95,
       }),
     );
-    glass.position.set(0.82, 3.66, 0);
+    glass.position.set(0.82, 3.55, 0);
     glass.scale.set(1, 1.22, 1);
 
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.26, 12), wood);
-    cap.position.set(0.82, 4.14, 0);
-    const capBottom = new THREE.Mesh(new THREE.ConeGeometry(0.27, 0.2, 12), wood);
-    capBottom.position.set(0.82, 3.2, 0);
-    capBottom.rotation.x = Math.PI;
+    const halo = glowSprite(WARM, 6.6, 0);
+    halo.position.set(0.82, 3.55, 0);
 
-    const halo = glowSprite(WARM, 5.4, 0);
-    halo.position.set(0.82, 3.66, 0);
+    if (housing) {
+      housing.position.set(0.82, 4.26 - 1.5, 0);
+      group.add(housing);
+    } else {
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(0.33, 0.26, 12), wood);
+      cap.position.set(0.82, 4.14, 0);
+      const capBottom = new THREE.Mesh(new THREE.ConeGeometry(0.27, 0.2, 12), wood);
+      capBottom.position.set(0.82, 3.2, 0);
+      capBottom.rotation.x = Math.PI;
+      group.add(cap, capBottom);
+    }
 
     // Safe zone marker: shades cannot cross this ring (TUNING.safe_radius).
     const safeRing = new THREE.Mesh(
@@ -226,7 +244,7 @@ export class GameView {
     safeRing.rotation.x = -Math.PI / 2;
     safeRing.position.y = 0.04;
 
-    group.add(base, pole, arm, hook, glass, cap, capBottom, halo, safeRing);
+    group.add(base, pole, arm, hook, glass, halo, safeRing);
     this.root.add(group);
     return { group, glass, halo, safeRing, lit: false };
   }
@@ -299,7 +317,7 @@ export class GameView {
         view.lit = lantern.lit;
         if (lantern.lit) {
           view.glass.material.emissive.setHex(WARM);
-          view.glass.material.emissiveIntensity = 2.4;
+          view.glass.material.emissiveIntensity = 3.2;
           view.glass.material.color.setHex(0xffd9a0);
         } else {
           view.glass.material.emissive.setHex(0x4a2f0e);
@@ -308,7 +326,7 @@ export class GameView {
         }
       }
       const pulse = lantern.lit ? 0.85 + Math.sin(elapsed * 2.4) * 0.12 : 0;
-      view.halo.material.opacity = pulse * 0.75;
+      view.halo.material.opacity = pulse * 0.95;
       view.safeRing.material.opacity = lantern.lit ? 0.16 + Math.sin(elapsed * 1.8) * 0.03 : 0;
     }
 

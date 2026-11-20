@@ -30,6 +30,19 @@ body {
   touch-action: none;
 }
 
+#boot {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 192, 120, 0.72);
+  background: #05070f;
+}
+
 .game-canvas:active {
   cursor: grabbing;
 }

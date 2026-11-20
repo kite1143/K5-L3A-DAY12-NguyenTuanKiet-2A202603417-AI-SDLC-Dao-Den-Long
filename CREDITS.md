@@ -6,14 +6,36 @@
 
 ## Hình ảnh
 
-Không có file ảnh, mô hình 3D hay texture nào được đưa vào repo. Toàn bộ hình ảnh được dựng bằng hình học Three.js và ánh sáng trong mã nguồn:
+Không có file texture, mô hình nhân vật hay âm thanh nào được vẽ tay. Bối cảnh nền dựng bằng hình học Three.js; các prop ngoài cảnh lấy từ Polyfork (mục dưới).
 
 | Thành phần | Sinh ra từ | Giấy phép |
 |---|---|---|
-| Đảo, đá, cây thông, đường đất, vành bờ | `src/render/scene.ts` — Three.js primitives | MIT (mã trong repo) |
-| Mây, nón lá, thân nhân vật, đèn lồng, Bóng Mực | `src/render/entities.ts` | MIT (mã trong repo) |
+| Đảo, đường đất, vành bờ, biển mây, sao, trăng | `src/render/scene.ts` — Three.js primitives | MIT (mã trong repo) |
+| Nhân vật Mây, nón lá, đèn nhỏ trên nón | `src/render/entities.ts` | MIT (mã trong repo) |
+| Bóng Mực, đom đóm, đèn lồng của người chơi | `src/render/entities.ts` | MIT (mã trong repo) |
 | Quầng sáng (glow) | `src/render/textures.ts` — gradient vẽ bằng canvas 2D lúc chạy | MIT (mã trong repo) |
-| Bầu trời, sao, trăng, biển mây | `src/render/scene.ts` | MIT (mã trong repo) |
+| Cây thông, đá, túp lều, thuyền, đèn lồng lớn, nấm | `public/models/*.glb` — Polyfork, CC BY 4.0 | xem mục dưới |
+
+## Mô hình 3D ngoài — Polyfork, CC BY 4.0
+
+Các file `.glb` trong `public/models/` là mô hình low-poly của **Polyfork**. Polyfork cấp mỗi mesh file dưới hai lựa chọn: **CC BY 4.0** hoặc licence riêng của họ (không cần credit nhưng **không được phân phối lại file**). Vì repo này **public** và chứa file trong lịch sử git, tôi chọn **CC BY 4.0** — giấy phép cho phép dùng, sửa và phân phối lại kèm credit.
+
+**Đã sửa:** mỗi mô hình được scale về kích thước phù hợp cảnh và xoay quanh trục Y (xem `placeProp` trong `src/render/assets.ts`). Chỉ tải **mesh file `.glb`**; các file `.mjs` (source có tham số) không thuộc CC BY nên không dùng.
+
+| Mô hình | Nguồn | Giấy phép |
+|---|---|---|
+| Tall Pine Tree | [polyfork.dev/asset/tall-pine-tree-ab4108](https://polyfork.dev/asset/tall-pine-tree-ab4108) | CC BY 4.0 |
+| Young Pine | [polyfork.dev/asset/young-pine-0d7695](https://polyfork.dev/asset/young-pine-0d7695) | CC BY 4.0 |
+| Medium Rock | [polyfork.dev/asset/medium-rock-e08405](https://polyfork.dev/asset/medium-rock-e08405) | CC BY 4.0 |
+| Small Rock | [polyfork.dev/asset/small-rock-db33a7](https://polyfork.dev/asset/small-rock-db33a7) | CC BY 4.0 |
+| Harbour Master's Hut | [polyfork.dev/asset/harbour-master-s-hut-226f34](https://polyfork.dev/asset/harbour-master-s-hut-226f34) | CC BY 4.0 |
+| Wooden Rowboat | [polyfork.dev/asset/wooden-rowboat-916981](https://polyfork.dev/asset/wooden-rowboat-916981) | CC BY 4.0 |
+| Spirit Lantern | [polyfork.dev/asset/spirit-lantern-8d1bfc](https://polyfork.dev/asset/spirit-lantern-8d1bfc) | CC BY 4.0 |
+| Glowing Bonnet Mushroom | [polyfork.dev/asset/glowing-bonnet-mushroom-13f518](https://polyfork.dev/asset/glowing-bonnet-mushroom-13f518) | CC BY 4.0 |
+
+Dòng credit theo đúng mẫu của Polyfork, ví dụ: `Tall Pine Tree by Polyfork (https://polyfork.dev/asset/tall-pine-tree-ab4108), CC BY 4.0` — đã sửa: scale và xoay. Tải lại bằng `npm run assets`; danh sách id nằm trong `scripts/fetch-assets.mjs`, credit tương ứng ở `src/render/assets.ts` (`PROP_CREDITS`).
+
+Các mô hình này **chỉ** dùng ở lớp render. Chúng tải không được (offline, thiếu file) thì cảnh tự quay về mesh thủ tục — xem `placeProp` trả `null`. Mô phỏng headless không bao giờ import `src/render`, nên đầu ra theo Test Contract không thể đổi vì asset.
 
 ## Âm thanh
 

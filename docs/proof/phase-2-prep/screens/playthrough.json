@@ -1,0 +1,30 @@
+{
+  "seed": "202603417",
+  "transcript": [
+    "intro screenshot — seed 202603417",
+    "island ready: 30 motes, 5 lanterns, 299.4s of night",
+    "controls: D@yaw0 dx=-1.00 dz=0.00 | A@yaw0 dx=1.00 | D@yaw90 dz=1.00 | A@yaw90 dz=-0.50 -> OK",
+    "first mote picked up at 1.9s",
+    "lantern lit #1 at 7.9s",
+    "pulse screenshot — shade S1 at 4.01 m",
+    "final: won / score 1362 / lanterns lit 5/5 / flames 3",
+    "replay after won: state=playing score=0 flames=3",
+    "replay check: new night starts clean",
+    "HUD: flames=●●● carry=0 / 3 score=0 time=05:00 lanterns=○○○○○",
+    "canvas 1152x648"
+  ],
+  "consoleLog": [
+    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "hud": {
+    "flames": "●●●",
+    "carry": "0 / 3",
+    "score": "0",
+    "time": "05:00",
+    "lit": "○○○○○",
+    "overlay": true
+  }
+}

@@ -35,7 +35,9 @@ function log(message) {
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-lcd-text'],
 });
-const page = await browser.newPage({ viewport: { width: 1440, height: 810 } });
+// Headless Chromium renders with SwiftShader (no GPU). A smaller viewport keeps
+// the frame rate high enough for the bot to finish a whole night.
+const page = await browser.newPage({ viewport: { width: 1152, height: 648 } });
 page.on('console', (message) => consoleLog.push(`[${message.type()}] ${message.text()}`));
 page.on('pageerror', (error) => consoleLog.push(`[pageerror] ${error.message}`));
 
@@ -104,7 +106,7 @@ let pressed = 0;
 
 await page.keyboard.down('KeyW');
 
-for (let step = 0; step < 900; step += 1) {
+for (let step = 0; step < 1600; step += 1) {
   const state = await read();
   if (state.state !== 'playing') break;
 

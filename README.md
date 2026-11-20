@@ -104,10 +104,13 @@ src/core/               logic game thuần TypeScript (không import three/DOM)
   scenario.ts inputs.ts đọc và kiểm tra file scenario/inputs
 src/headless/main.ts    CLI theo Test Contract v1.0 (bundle đã commit ở dist/headless/)
 src/render/             Three.js: cảnh, nhân vật, HUD, âm thanh, điều khiển
+  assets.ts             tải prop .glb + fallback về mesh thủ tục
+public/models/          prop low-poly (Polyfork, CC BY 4.0 — xem CREDITS.md)
 tests/                  node:test (hợp đồng, mô phỏng, CLI)
 scenarios/              scenario + inputs tái lập được, có manifest
 scripts/verify.mjs      kiểm chứng một lệnh, sinh docs/proof/<phase>/
 scripts/shots.mjs       bot chơi thật trong Chromium và chụp ảnh bằng chứng
+scripts/fetch-assets.mjs tải lại prop ngoài (npm run assets)
 docs/notes/             giả định, nhật ký dùng AI, retro
 docs/proof/             bằng chứng từng phase
 docs/lab/               tài liệu gốc của lab (giữ nguyên để tham chiếu)
@@ -121,10 +124,15 @@ Những thứ thêm vào không làm đổi một dòng nào của mô phỏng h
 2. **Vòng an toàn phát sáng** quanh mỗi đèn đã thắp — vẽ đúng bán kính `safe_radius` 3 m trong contract, để người chơi thấy được luật chơi thay vì phải đoán.
 3. **Đảo sáng dần theo số đèn** (sương mỏng đi, nền ấm lên) đúng yêu cầu "đảo sáng dần lên khi thắp đèn" trong PRD-0.
 4. **Âm thanh tổng hợp bằng WebAudio**, không có file asset nào: tiếng nhặt đom đóm, tiếng nạp đèn, chuông khi đèn cháy, tiếng ù khi tỏa sáng, tiếng va chạm trầm.
-5. **Biển mây và màn đêm thủ tục**: sao, trăng, mây trôi chậm, cỏ và đá thấp thoáng — toàn bộ sinh bằng code, không dùng asset ngoài.
+5. **Biển mây và màn đêm thủ tục**: sao, trăng, mây trôi chậm — sinh bằng code, không dùng asset ngoài.
 6. **Màn giới thiệu ngắn** kể bối cảnh bằng tiếng Việt, và tham số `?seed=` để chia sẻ lại đúng hòn đảo.
+7. **Đảo Bến có bến thật**: một túp lều của người giữ bến và một chiếc thuyền mộc neo trên bờ, cùng rặng thông, đá và nấm phát sáng. Sáu prop cảnh vật này là mô hình low-poly của **Polyfork, CC BY 4.0** (xem [CREDITS](CREDITS.md)); nhân vật Mây vẫn là hình học tự dựng để giữ đúng "nón lá có treo đèn lồng nhỏ" trong PRD-0.
 
 Bằng chứng phần lõi vẫn đúng sau khi thêm các mục trên: `npm test` 67/67 và `npm run verify` xanh ([báo cáo](docs/proof/phase-1/verify-report.md)).
+
+### Vì sao asset không thể phá Test Contract
+
+`src/render/assets.ts` chỉ được `src/render/**` import; `src/core` và `src/headless` không biết asset tồn tại. Model tải lỗi (offline, thiếu file, trình duyệt chặn) thì `placeProp` trả `null` và cảnh quay về mesh thủ tục — game vẫn chạy, đầu ra headless không đổi một byte. Đã kiểm chứng: `npm run verify` vẫn PASS sau khi thêm asset.
 
 ## Bằng chứng từng phase
 
