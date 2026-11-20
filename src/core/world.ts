@@ -1,5 +1,8 @@
 import {
+  CAPACITY_BASE,
+  CAPACITY_PER_LIGHT,
   DRIFTER_HEIGHT,
+  FUEL_MAX_UNITS,
   MOTE_CAP,
   MOTE_START,
   SHADE_HEIGHT,
@@ -52,6 +55,8 @@ function makePlayer(map: NightMap): Player {
     facingZ: 1,
     grounded: true,
     carried: 0,
+    capacity: CAPACITY_BASE,
+    successfulLights: 0,
     flames: TUNING.flames,
     invulnTicks: 0,
     dashTicks: 0,
@@ -96,6 +101,9 @@ function buildLanterns(w: World, scenario: ScenarioInput | null): void {
     cost: TUNING.lantern_cost,
     deposited: 0,
     lit: false,
+    fuelUnits: 0,
+    everLit: false,
+    relitCount: 0,
   }));
 
   for (const update of scenario?.lanterns ?? []) {
@@ -107,7 +115,18 @@ function buildLanterns(w: World, scenario: ScenarioInput | null): void {
       target.z = update.pos[2];
     }
     if (update.deposited !== undefined) target.deposited = update.deposited;
-    if (update.lit !== undefined) target.lit = update.lit;
+    if (update.ever_lit !== undefined) target.everLit = update.ever_lit;
+    if (update.fuel !== undefined) {
+      target.fuelUnits = Math.max(0, Math.min(FUEL_MAX_UNITS, Math.round(update.fuel * 60)));
+    }
+    if (update.lit !== undefined) {
+      target.lit = update.lit;
+      // A scenario that lights a lantern without a fuel value lights it full.
+      if (update.lit && update.fuel === undefined) target.fuelUnits = FUEL_MAX_UNITS;
+      if (!update.lit) target.fuelUnits = 0;
+    }
+    // A seeded lit lantern counts as "ever lit" so a relight costs 5.
+    if (target.lit) target.everLit = true;
   }
 }
 
@@ -177,6 +196,13 @@ export function createWorld(seed: number, night: NightId = 1, scenario: Scenario
       }
       if (p.carried !== undefined) w.player.carried = p.carried;
       if (p.flames !== undefined) w.player.flames = p.flames;
+      if (p.successful_lights !== undefined) {
+        w.player.successfulLights = p.successful_lights;
+        w.player.capacity = Math.min(
+          TUNING.capacity_max,
+          CAPACITY_BASE + CAPACITY_PER_LIGHT * p.successful_lights,
+        );
+      }
       if (p.invuln_ticks !== undefined) w.player.invulnTicks = p.invuln_ticks;
       if (p.dash_cd_ticks !== undefined) w.player.dashCdTicks = p.dash_cd_ticks;
       if (p.pulse_cd_ticks !== undefined) w.player.pulseCdTicks = p.pulse_cd_ticks;
@@ -218,6 +244,7 @@ export function createWorld(seed: number, night: NightId = 1, scenario: Scenario
       pushZ: 0,
       pushTicksLeft: 0,
       pushRemaining: 0,
+      targetLanternId: s.target_lantern_id ?? null,
     }));
     w.shadeSeq = w.shades.length + 1;
   }
@@ -281,6 +308,7 @@ export function spawnShadeAt(w: World, x: number, z: number, spawningTicks = SHA
     pushZ: 0,
     pushTicksLeft: 0,
     pushRemaining: 0,
+    targetLanternId: null,
   };
   w.shadeSeq += 1;
   return shade;

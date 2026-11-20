@@ -1,4 +1,4 @@
-import { TICKS_PER_SECOND } from './config';
+import { TICKS_PER_SECOND, fuelToDisplay } from './config';
 import { InputTimeline } from './inputs';
 import { stepWorld } from './step';
 import { activeMoteCount, createWorld, timeLeftSeconds } from './world';
@@ -48,6 +48,7 @@ export function snapshotLine(w: World, tick: number): string {
       vel: [round3(p.vx), round3(p.vy), round3(p.vz)],
       flames: p.flames,
       carried: p.carried,
+      capacity: p.capacity,
       grounded: p.grounded,
       invuln: p.invulnTicks,
       dash_cd_s: round3(p.dashCdTicks / TICKS_PER_SECOND),
@@ -59,11 +60,15 @@ export function snapshotLine(w: World, tick: number): string {
       pos: [round3(l.x), round3(l.y), round3(l.z)],
       lit: l.lit,
       deposited: l.deposited,
+      fuel: fuelToDisplay(l.fuelUnits),
+      ever_lit: l.everLit,
+      relit_count: l.relitCount,
     })),
     shades: w.shades.map((s) => ({
       id: s.id,
       pos: [round3(s.x), round3(s.y), round3(s.z)],
       state: s.state,
+      target_lantern_id: s.targetLanternId,
     })),
     drifters: w.drifters.map((d) => ({
       id: d.id,

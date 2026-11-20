@@ -2,11 +2,11 @@ import type { Rng } from './rng';
 import type { NightId, NightMap } from './nights';
 
 export type GameState = 'playing' | 'won' | 'lost';
-/** Contract v1.1 fixes these five names for shades. */
-export type ShadeState = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned';
+/** Contract v1.2 fixes these six names for shades. */
+export type ShadeState = 'spawning' | 'wander' | 'chase' | 'recoil' | 'stunned' | 'drain';
 export type DrifterState = 'idle' | 'chase' | 'flee' | 'removed';
 export type MoteKind = 'random' | 'dropped';
-export type GameOverReason = 'all_lit' | 'dawn' | 'no_flames';
+export type GameOverReason = 'dawn_survived' | 'dawn' | 'no_flames';
 export type HitSource = 'shade' | 'fall';
 
 export interface Mote {
@@ -38,6 +38,8 @@ export interface Shade {
   pushZ: number;
   pushTicksLeft: number;
   pushRemaining: number;
+  /** v1.2: the lantern a wandering/draining shade walks to. */
+  targetLanternId: string | null;
 }
 
 export interface Drifter {
@@ -72,8 +74,14 @@ export interface Lantern {
   y: number;
   z: number;
   cost: number;
+  /** Progress toward lighting *this* time (only meaningful while unlit). */
   deposited: number;
   lit: boolean;
+  /** Remaining fuel in 1/60 units; 0 when the lantern is out. */
+  fuelUnits: number;
+  /** True once the lantern has ever been lit; makes a relight cost 5 motes. */
+  everLit: boolean;
+  relitCount: number;
 }
 
 export interface Player {
@@ -88,6 +96,10 @@ export interface Player {
   facingZ: number;
   grounded: boolean;
   carried: number;
+  /** Current carry limit: 10 + 2 per successful light, capped at 20. */
+  capacity: number;
+  /** Lights and relights this night (scenario-seeded lit lanterns do not count). */
+  successfulLights: number;
   flames: number;
   invulnTicks: number;
   dashTicks: number;

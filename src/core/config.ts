@@ -12,13 +12,20 @@ export const TICKS_PER_SECOND = 60;
 export interface ScoreTuning {
   per_mote: number;
   per_lantern: number;
+  per_relight: number;
   per_stun: number;
+  per_stun_drain: number;
+  dawn_per_lantern: number;
+  dawn_per_flame: number;
+  /** Kept for contract shape compatibility; v1.2 pays no time bonus. */
   per_second_left: number;
+  /** Kept for contract shape compatibility; v1.2 pays no flame bonus at dawn. */
   per_flame_left: number;
 }
 
 export interface Tuning {
   player_speed: number;
+  /** Starting carry capacity; grows with successful lights (v1.2). */
   carry_capacity: number;
   lantern_cost: number;
   lantern_count_night1: number;
@@ -42,6 +49,15 @@ export interface Tuning {
   dash_speed: number;
   dash_duration_s: number;
   dash_cooldown_s: number;
+  /** v1.2 — lantern fuel economy. */
+  fuel_max: number;
+  fuel_decay_per_s: number;
+  fuel_per_mote: number;
+  relight_cost: number;
+  win_ratio: number;
+  drain_per_s: number;
+  low_fuel_threshold: number;
+  capacity_max: number;
   score: ScoreTuning;
 }
 
@@ -54,9 +70,9 @@ export const TUNING: Tuning = {
   interact_radius: 2.0,
   pulse_cost: 3,
   pulse_radius: 5.0,
-  night1_duration_s: 300,
-  night2_duration_s: 330,
-  night3_duration_s: 360,
+  night1_duration_s: 240,
+  night2_duration_s: 270,
+  night3_duration_s: 300,
   flames: 3,
   invuln_s: 1.5,
   hit_drop_ratio: 0.5,
@@ -70,12 +86,24 @@ export const TUNING: Tuning = {
   dash_speed: 14.0,
   dash_duration_s: 0.2,
   dash_cooldown_s: 1.5,
+  fuel_max: 100,
+  fuel_decay_per_s: 1.0,
+  fuel_per_mote: 10,
+  relight_cost: 5,
+  win_ratio: 0.6,
+  drain_per_s: 5,
+  low_fuel_threshold: 30,
+  capacity_max: 20,
   score: {
-    per_mote: 10,
+    per_mote: 5,
     per_lantern: 100,
+    per_relight: 40,
     per_stun: 5,
-    per_second_left: 2,
-    per_flame_left: 50,
+    per_stun_drain: 15,
+    dawn_per_lantern: 50,
+    dawn_per_flame: 50,
+    per_second_left: 0,
+    per_flame_left: 0,
   },
 };
 
@@ -150,6 +178,35 @@ export const WIND_PUSH_SPEED = 2.0;
 /** Where inside each period the gust starts (after the warning window). */
 export const WIND_GUST_OFFSET_TICKS = 480;
 
+// --- lantern fuel (v1.2). Fuel is kept in 1/60 units so nothing drifts. ------
+/** 100 fuel × 60 units. */
+export const FUEL_MAX_UNITS = TUNING.fuel_max * 60;
+/** 1 fuel per second = 1 unit per tick. */
+export const FUEL_DECAY_UNITS_PER_TICK = TUNING.fuel_decay_per_s;
+/** 10 fuel per châm = 600 units. */
+export const FUEL_PER_MOTE_UNITS = TUNING.fuel_per_mote * 60;
+/** A shade drains 5 fuel per second = 5 units per tick. */
+export const DRAIN_UNITS_PER_TICK = TUNING.drain_per_s;
+/** "Sắp cạn" (loses the safe zone, shades target it) = 30 fuel. */
+export const LOW_FUEL_UNITS = TUNING.low_fuel_threshold * 60;
+/** Bóng Mực must be this close (XZ) to a weak lantern to start draining. */
+export const DRAIN_RANGE = 2.0;
+/** How often the fuel_drain event is written while draining. */
+export const DRAIN_EVENT_INTERVAL_TICKS = 60;
+/** Carry capacity = base + 2 per successful light, capped. */
+export const CAPACITY_BASE = 10;
+export const CAPACITY_PER_LIGHT = 2;
+
+/** Output helper: fuel in whole units → the 1-decimal number the contract wants. */
+export function fuelToDisplay(fuelUnits: number): number {
+  return Math.round((Math.max(0, fuelUnits) / 60) * 10) / 10;
+}
+
+/** Lit lanterns needed to survive a dawn of `total` lanterns. */
+export function dawnThreshold(total: number): number {
+  return Math.ceil(TUNING.win_ratio * total);
+}
+
 // --- palette (contract part 3). Render uses these; tests assert the values --
 export const PALETTE = {
   skyNight: '#0E1430',
@@ -172,6 +229,9 @@ export const PALETTE = {
   drifter: '#8FA3B8',
   danger: '#FF5A5F',
   uiText: '#F5F1E6',
+  /** Colour-blind-safe alternatives (Ticket-03 part 6). */
+  shadeRimCb: '#00B3FF',
+  dangerCb: '#FFFFFF',
 } as const;
 
 /** Ambient intensity the stage must use: 0.15 + 0.55 × (lit / total). */

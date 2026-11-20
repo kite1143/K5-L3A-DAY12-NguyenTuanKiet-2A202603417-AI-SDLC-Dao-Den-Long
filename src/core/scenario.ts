@@ -20,6 +20,8 @@ export interface ScenarioPlayer {
   dash_cd_ticks?: number;
   pulse_cd_ticks?: number;
   charm_ticks?: number;
+  /** v1.2: lights already earned this night (drives capacity). */
+  successful_lights?: number;
 }
 
 export interface ScenarioLantern {
@@ -27,6 +29,9 @@ export interface ScenarioLantern {
   pos?: [number, number, number];
   deposited?: number;
   lit?: boolean;
+  /** v1.2: remaining fuel in whole units (0..100). */
+  fuel?: number;
+  ever_lit?: boolean;
 }
 
 export interface ScenarioShade {
@@ -34,6 +39,8 @@ export interface ScenarioShade {
   pos: [number, number, number];
   state?: ShadeState;
   state_ticks_left?: number;
+  /** v1.2: the lantern a wandering/draining shade walks to. */
+  target_lantern_id?: string | null;
 }
 
 export interface ScenarioDrifter {
@@ -61,7 +68,7 @@ export interface ScenarioInput {
   time_left_s?: number;
 }
 
-const SHADE_STATES: ShadeState[] = ['spawning', 'wander', 'chase', 'recoil', 'stunned'];
+const SHADE_STATES: ShadeState[] = ['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'];
 const DRIFTER_STATES: DrifterState[] = ['idle', 'chase', 'flee', 'removed'];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
@@ -113,6 +120,9 @@ export function parseScenario(raw: unknown): ScenarioInput {
     if (raw.player.charm_ticks !== undefined) {
       p.charm_ticks = nonNegativeInt(raw.player.charm_ticks, 'player.charm_ticks');
     }
+    if (raw.player.successful_lights !== undefined) {
+      p.successful_lights = nonNegativeInt(raw.player.successful_lights, 'player.successful_lights');
+    }
     out.player = p;
   }
 
@@ -145,6 +155,12 @@ export function parseScenario(raw: unknown): ScenarioInput {
       }
       if (s.state_ticks_left !== undefined) {
         shade.state_ticks_left = nonNegativeInt(s.state_ticks_left, `shades[${i}].state_ticks_left`);
+      }
+      if (s.target_lantern_id !== undefined) {
+        if (s.target_lantern_id !== null && typeof s.target_lantern_id !== 'string') {
+          throw new ContractFormatError(`shades[${i}].target_lantern_id must be a string or null`);
+        }
+        shade.target_lantern_id = s.target_lantern_id as string | null;
       }
       return shade;
     });
@@ -193,6 +209,12 @@ export function parseScenario(raw: unknown): ScenarioInput {
       if (l.pos !== undefined) lantern.pos = vec3(l.pos, `lanterns[${i}].pos`);
       if (l.deposited !== undefined) lantern.deposited = nonNegativeInt(l.deposited, `lanterns[${i}].deposited`);
       if (l.lit !== undefined) lantern.lit = bool(l.lit, `lanterns[${i}].lit`);
+      if (l.fuel !== undefined) {
+        const fuel = num(l.fuel, `lanterns[${i}].fuel`);
+        if (fuel < 0 || fuel > 100) throw new ContractFormatError(`lanterns[${i}].fuel must be in [0, 100]`);
+        lantern.fuel = fuel;
+      }
+      if (l.ever_lit !== undefined) lantern.ever_lit = bool(l.ever_lit, `lanterns[${i}].ever_lit`);
       return lantern;
     });
   }

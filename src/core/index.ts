@@ -4,6 +4,8 @@ export {
   TUNING,
   PALETTE,
   ambientForLit,
+  dawnThreshold,
+  fuelToDisplay,
   DASH_TICKS,
   DASH_COOLDOWN_TICKS,
   PULSE_STUN_TICKS,
@@ -15,6 +17,8 @@ export {
   MOTE_START,
   CHARM_TICKS,
   DRIFTER_MAX,
+  FUEL_MAX_UNITS,
+  LOW_FUEL_UNITS,
 } from './config';
 export type { ScoreTuning, Tuning } from './config';
 export { NIGHT_IDS, NIGHT_MAPS, NIGHT2_GEOMETRY, NIGHT3_GEOMETRY, nightMap, VOID } from './nights';
