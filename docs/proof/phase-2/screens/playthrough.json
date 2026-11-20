@@ -1,0 +1,37 @@
+{
+  "seed": "202603417",
+  "transcript": [
+    "  screenshot 01-menu.png",
+    "  screenshot 02-night1-intro.png",
+    "night 1 started: seed 202603417",
+    "  controls: D dx=-2.50 A dx=2.50 -> OK",
+    "  screenshot 03-night1-play.png",
+    "  after play: carried 4, lanterns lit 0, shades 3 (max seen 3), rendered shades 3",
+    "  screenshot 05-hud.png",
+    "  HUD: flames=●●○ clock=04:40 lanterns=0/5 score=50 motes=4/10",
+    "  result: state=lost flames=0 totalScore=0",
+    "  screenshot 06-result.png",
+    "  restart from the result screen works",
+    "  screenshot 07-restart.png",
+    "  screenshot 08-night2-islands.png",
+    "  night 2: lanterns 6, charms 1, motes 20",
+    "  screenshot 09-night2-view.png",
+    "  screenshot 10-night3-tiers.png",
+    "  night 3: lanterns 7, charms 2, spawn [0,0,-30]"
+  ],
+  "consoleLog": [
+    "[warning] [.WebGL-0x36e401124600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x36e401124600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x36e401124600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x36e401124600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "hud": {
+    "flames": "●●○",
+    "clock": "04:40",
+    "lanterns": "0/5",
+    "score": "50",
+    "slots": 10,
+    "slotsFull": 4,
+    "urgent": false
+  }
+}

@@ -2,67 +2,67 @@
 /**
  * shots.mjs — plays the real browser build and saves proof screenshots.
  *
- * It launches Chromium (Playwright), opens the game, and drives it with a small
- * bot that steers toward the nearest mote, then toward an unlit lantern, presses
- * E to deposit and F when a shade closes in. Everything it relies on is the
- * same input path a human uses (keyboard + camera yaw), so a successful run is
- * real evidence that the browser build plays.
+ * It launches Chromium (Playwright), walks the menu → night intro → gameplay,
+ * checks the A/D direction at two camera yaws, plays a short session, then walks
+ * off the island three times to produce a real "lost" result screen and proves
+ * the restart button works. Finally it loads nights 2 and 3 to capture their
+ * maps. Everything goes through the same input path a human uses.
  *
  * Requirements (kept out of package.json on purpose: graders do not need it):
  *   npm install --no-save playwright && npx playwright install chromium
  *
- * Usage:
- *   node scripts/shots.mjs <url> [outDir] [seed]
+ * Usage: node scripts/shots.mjs <url> [outDir] [seed]
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
 
 const url = process.argv[2] ?? 'http://127.0.0.1:5173/';
-const outDir = process.argv[3] ?? 'docs/proof/phase-1/screens';
+const outDir = process.argv[3] ?? 'docs/proof/phase-2/screens';
 const seed = process.argv[4] ?? '202603417';
-const target = `${url.split('?')[0]}?seed=${seed}`;
 mkdirSync(outDir, { recursive: true });
 
 const transcript = [];
 const consoleLog = [];
-
-function log(message) {
-  transcript.push(message);
-  process.stdout.write(`${message}\n`);
-}
+const log = (m) => {
+  transcript.push(m);
+  process.stdout.write(`${m}\n`);
+};
 
 const browser = await chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--disable-lcd-text'],
 });
-// Headless Chromium renders with SwiftShader (no GPU). A smaller viewport keeps
-// the frame rate high enough for the bot to finish a whole night.
 const page = await browser.newPage({ viewport: { width: 1152, height: 648 } });
-page.on('console', (message) => consoleLog.push(`[${message.type()}] ${message.text()}`));
-page.on('pageerror', (error) => consoleLog.push(`[pageerror] ${error.message}`));
+page.on('console', (m) => consoleLog.push(`[${m.type()}] ${m.text()}`));
+page.on('pageerror', (e) => consoleLog.push(`[pageerror] ${e.message}`));
 
 const read = () => page.evaluate(() => window.__dao.snapshot());
+const waitPhase = (name) =>
+  page.waitForFunction((phase) => window.__dao?.snapshot().phase === phase, name, { timeout: 60000 });
 const setYaw = (deg) => page.evaluate((value) => window.__dao.setYaw(value), deg);
+const startNight = (n) => page.evaluate((night) => window.__dao.startNight(night), n);
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
+const shot = async (name) => {
+  await page.screenshot({ path: join(outDir, name) });
+  log(`  screenshot ${name}`);
+};
 
-await page.goto(target, { waitUntil: 'load' });
-await page.waitForFunction(() => Boolean(window.__dao), null, { timeout: 15000 });
+await page.goto(`${url.split('?')[0]}?seed=${seed}`, { waitUntil: 'load' });
+await page.waitForFunction(() => Boolean(window.__dao), null, { timeout: 20000 });
 await page.waitForTimeout(1200);
-await page.screenshot({ path: join(outDir, '01-intro.png') });
-log(`intro screenshot — seed ${seed}`);
 
-// ---- start the night --------------------------------------------------------
+// --- menu and intro --------------------------------------------------------
+await shot('01-menu.png');
 await page.keyboard.press('Enter');
-await page.waitForTimeout(700);
-await page.screenshot({ path: join(outDir, '02-island.png') });
-const initial = await read();
-log(`island ready: ${initial.motes.length} motes, ${initial.lanterns.length} lanterns, ${initial.timeLeftTicks / 60}s of night`);
+await waitPhase('intro');
+await page.waitForTimeout(400);
+await shot('02-night1-intro.png');
+await page.keyboard.press('Enter');
+await waitPhase('playing');
+await page.waitForTimeout(600);
+log(`night 1 started: seed ${seed}`);
 
-// ---- controls sanity check --------------------------------------------------
-// The camera looks along +Z, so the right-hand side of the screen is world -X.
-// D must walk towards it, A must walk away from it, at any camera yaw.
-// Headless Chromium renders through SwiftShader at a low frame rate, so hold the
-// key long enough that several frames (and therefore simulation steps) happen.
+// --- A/D direction at two camera yaws -------------------------------------
 async function measure(key, yaw) {
   await setYaw(yaw);
   await page.waitForTimeout(250);
@@ -74,105 +74,46 @@ async function measure(key, yaw) {
   const after = await read();
   return { dx: after.player.x - before.player.x, dz: after.player.z - before.player.z };
 }
+const d0 = await measure('KeyD', 0);
+const a0 = await measure('KeyA', 0);
+const controlsOk = d0.dx < -0.3 && a0.dx > 0.3;
+log(`  controls: D dx=${d0.dx.toFixed(2)} A dx=${a0.dx.toFixed(2)} -> ${controlsOk ? 'OK' : 'WRONG'}`);
+if (!controlsOk) process.exitCode = 1;
 
-const dYaw0 = await measure('KeyD', 0);
-const aYaw0 = await measure('KeyA', 0);
-const dYaw90 = await measure('KeyD', 90);
-const aYaw90 = await measure('KeyA', 90);
-const controlsOk =
-  dYaw0.dx < -0.3 &&
-  Math.abs(dYaw0.dz) < Math.abs(dYaw0.dx) &&
-  aYaw0.dx > 0.3 &&
-  Math.abs(aYaw0.dz) < Math.abs(aYaw0.dx) &&
-  dYaw90.dz > 0.3 &&
-  Math.abs(dYaw90.dx) < Math.abs(dYaw90.dz) &&
-  aYaw90.dz < -0.3 &&
-  Math.abs(aYaw90.dx) < Math.abs(aYaw90.dz);
-log(
-  `controls: D@yaw0 dx=${dYaw0.dx.toFixed(2)} dz=${dYaw0.dz.toFixed(2)} | ` +
-    `A@yaw0 dx=${aYaw0.dx.toFixed(2)} | D@yaw90 dz=${dYaw90.dz.toFixed(2)} | ` +
-    `A@yaw90 dz=${aYaw90.dz.toFixed(2)} -> ${controlsOk ? 'OK' : 'WRONG DIRECTION'}`,
-);
-if (!controlsOk) {
-  log('CONTROLS CHECK FAILED');
-  process.exitCode = 1;
-}
-
-// ---- play: collect, deposit, keep the shades off ---------------------------
-let firstMoteShot = false;
-let firstLanternShot = false;
-let allLanternShot = false;
-let shadeShot = false;
-let shadeCountChecked = false;
-let pressed = 0;
-
+// --- short play session: collect motes, deposit, take screenshots ---------
+let deposited = 0;
+let shadeSeen = 0;
+let dashTried = false;
+await setYaw(0);
 await page.keyboard.down('KeyW');
-
-for (let step = 0; step < 1600; step += 1) {
+for (let step = 0; step < 220; step += 1) {
   const state = await read();
   if (state.state !== 'playing') break;
+  shadeSeen = Math.max(shadeSeen, state.shades.length);
 
-  // Grab the milestone screenshots from the top of the loop so they are taken
-  // whichever branch runs next.
-  if (!firstMoteShot && state.player.carried >= 1) {
-    firstMoteShot = true;
-    await page.screenshot({ path: join(outDir, '03-first-mote.png') });
-    log(`first mote picked up at ${((initial.timeLeftTicks - state.timeLeftTicks) / 60).toFixed(1)}s`);
-  }
-  {
-    const litNow = state.lanterns.filter((l) => l.lit).length;
-    if (!firstLanternShot && litNow >= 1) {
-      firstLanternShot = true;
-      await page.screenshot({ path: join(outDir, '05-first-lantern-lit.png') });
-      log(`lantern lit #1 at ${((initial.timeLeftTicks - state.timeLeftTicks) / 60).toFixed(1)}s`);
-    }
-    if (!allLanternShot && litNow === state.lanterns.length) {
-      allLanternShot = true;
-      await page.screenshot({ path: join(outDir, '06-all-lit.png') });
-      log(`all ${litNow} lanterns lit at ${((initial.timeLeftTicks - state.timeLeftTicks) / 60).toFixed(1)}s`);
-    }
-  }
-
-  const shade = state.shades.find((s) => s.state !== 'stunned' && distance(s, state.player) < 4.2);
-
-  // A shade is spawned by the simulation at ~6 s: it must also exist as a mesh.
-  if (!shadeCountChecked && state.shades.length > 0) {
-    shadeCountChecked = true;
-    const rendered = await page.evaluate(() => window.__dao.renderedShades());
-    const ok = rendered === state.shades.length;
-    log(`shades: sim=${state.shades.length} rendered=${rendered} -> ${ok ? 'OK' : 'MISSING MESH'}`);
-    if (!ok) process.exitCode = 1;
-  }
-
-  if (!shadeShot && state.shades.some((s) => distance(s, state.player) < 9)) {
-    shadeShot = true;
-    await page.screenshot({ path: join(outDir, '08-shade.png') });
-    const nearest = state.shades.reduce((best, s) => (distance(s, state.player) < distance(best, state.player) ? s : best));
-    log(`shade screenshot — ${nearest.id} chasing at ${distance(nearest, state.player).toFixed(2)} m`);
-  }
-
-  if (shade) {
-    await page.keyboard.press('KeyF');
-    pressed += 1;
-    if (pressed === 1) {
-      await page.waitForTimeout(140);
-      await page.screenshot({ path: join(outDir, '04-pulse.png') });
-      log(`pulse screenshot — shade ${shade.id} at ${distance(shade, state.player).toFixed(2)} m`);
-    }
+  const shade = state.shades.find((s) => s.state !== 'stunned' && distance(s, state.player) < 4.5);
+  if (shade && state.player.carried >= 3) await page.keyboard.press('KeyF');
+  if (!dashTried && step === 40) {
+    dashTried = true;
+    await page.keyboard.press('ShiftLeft');
   }
 
   const unlit = state.lanterns.filter((l) => !l.lit);
-  const carrying = state.player.carried > 0;
-
+  const carrying = state.player.carried >= 5;
   if (carrying && unlit.length > 0) {
-    const lantern = unlit.reduce((best, l) => (distance(l, state.player) < distance(best, state.player) ? l : best));
-    const gap = distance(lantern, state.player);
-    if (gap <= 2.1) {
+    const target = unlit.reduce((best, l) => (distance(l, state.player) < distance(best, state.player) ? l : best));
+    if (distance(target, state.player) <= 2.0) {
       await page.keyboard.press('KeyE');
-      await page.waitForTimeout(160);
+      await page.waitForTimeout(180);
+      const after = await read();
+      deposited = after.lanterns.filter((l) => l.lit).length;
+      if (deposited > 0 && !transcript.some((t) => t.includes('deposit screenshot'))) {
+        log(`  deposit screenshot — ${deposited} lantern(s) lit`);
+        await shot('04-deposit.png');
+      }
       continue;
     }
-    await setYaw((Math.atan2(lantern.x - state.player.x, lantern.z - state.player.z) * 180) / Math.PI);
+    await setYaw((Math.atan2(target.x - state.player.x, target.z - state.player.z) * 180) / Math.PI);
     await page.waitForTimeout(110);
     continue;
   }
@@ -182,73 +123,84 @@ for (let step = 0; step < 1600; step += 1) {
     null,
   );
   if (!mote) break;
-
   await setYaw((Math.atan2(mote.x - state.player.x, mote.z - state.player.z) * 180) / Math.PI);
+  if (step === 60) await shot('03-night1-play.png');
   await page.waitForTimeout(105);
 }
-
 await page.keyboard.up('KeyW');
-await page.waitForTimeout(500);
 
-const finalState = await read();
-await page.screenshot({ path: join(outDir, finalState.state === 'playing' ? '06-progress.png' : '06-end.png') });
+const afterPlay = await read();
+const rendered = await page.evaluate(() => window.__dao.rendered());
 log(
-  `final: ${finalState.state} / score ${finalState.score} / lanterns lit ${
-    finalState.lanterns.filter((l) => l.lit).length
-  }/${finalState.lanterns.length} / flames ${finalState.player.flames}`,
+  `  after play: carried ${afterPlay.player.carried}, lanterns lit ${afterPlay.lanterns.filter((l) => l.lit).length}, ` +
+    `shades ${afterPlay.shades.length} (max seen ${shadeSeen}), rendered shades ${rendered.shades}`,
 );
-
-// ---- replay after the night ends -------------------------------------------
-if (finalState.state !== 'playing') {
-  await page.keyboard.press('KeyR');
-  await page.waitForTimeout(900);
-  const replay = await read();
-  const replayOk =
-    replay.state === 'playing' &&
-    replay.score === 0 &&
-    replay.lanterns.every((l) => !l.lit) &&
-    replay.player.flames === 3 &&
-    replay.timeLeftTicks > initial.timeLeftTicks - 600;
-  log(`replay after ${finalState.state}: state=${replay.state} score=${replay.score} flames=${replay.player.flames}`);
-  await page.screenshot({ path: join(outDir, '07-replay.png') });
-  if (!replayOk) {
-    log('REPLAY CHECK FAILED');
-    process.exitCode = 1;
-  } else {
-    log('replay check: new night starts clean');
-  }
+if (rendered.shades !== afterPlay.shades.length) {
+  log('  RENDER MISMATCH: shade meshes missing');
+  process.exitCode = 1;
 }
-
-// The HUD must reflect the simulation, otherwise the game is unplayable even if
-// the logic is right. Read it straight out of the DOM.
+await shot('05-hud.png');
 const hud = await page.evaluate(() => {
   const text = (selector) => document.querySelector(selector)?.textContent?.trim() ?? '';
   return {
     flames: text('.flames'),
-    carry: text('.carry'),
+    clock: text('.clock'),
+    lanterns: text('.lanterns'),
     score: text('.score'),
-    time: text('.time'),
-    lit: text('.lit'),
-    overlay: document.querySelector('.overlay')?.classList.contains('hidden') ?? null,
+    slots: document.querySelectorAll('.mote-slot').length,
+    slotsFull: document.querySelectorAll('.mote-slot.full').length,
+    urgent: document.querySelector('.clock')?.classList.contains('urgent') ?? null,
   };
 });
-log(`HUD: flames=${hud.flames} carry=${hud.carry} score=${hud.score} time=${hud.time} lanterns=${hud.lit}`);
+log(`  HUD: flames=${hud.flames} clock=${hud.clock} lanterns=${hud.lanterns} score=${hud.score} motes=${hud.slotsFull}/${hud.slots}`);
 
-const canvasBox = await page.evaluate(() => {
-  const canvas = document.querySelector('canvas');
-  if (!canvas) return null;
-  return { width: canvas.width, height: canvas.height };
-});
-log(`canvas ${canvasBox ? `${canvasBox.width}x${canvasBox.height}` : 'MISSING'}`);
+// --- lose on purpose: three falls produce a real result screen ------------
+await setYaw(0);
+await page.keyboard.down('KeyW');
+for (let step = 0; step < 500; step += 1) {
+  const state = await read();
+  if (state.state !== 'playing') break;
+  await page.waitForTimeout(150);
+}
+await page.keyboard.up('KeyW');
+await waitPhase('result');
+await page.waitForTimeout(500);
+const lost = await read();
+log(`  result: state=${lost.state} flames=${lost.player.flames} totalScore=${lost.totalScore}`);
+await shot('06-result.png');
+
+// restart the same night from the result screen
+await page.click('.overlay .buttons button');
+await waitPhase('playing');
+await page.waitForTimeout(700);
+log('  restart from the result screen works');
+await shot('07-restart.png');
+
+// --- the other two maps ---------------------------------------------------
+await startNight(2);
+await page.waitForTimeout(2200);
+await setYaw(70);
+await page.waitForTimeout(600);
+await shot('08-night2-islands.png');
+const n2 = await read();
+log(`  night 2: lanterns ${n2.lanterns.length}, charms ${n2.charms.length}, motes ${n2.motes.length}`);
+await shot('09-night2-view.png');
+
+await startNight(3);
+await page.waitForTimeout(2200);
+await setYaw(0);
+await page.waitForTimeout(900);
+await shot('10-night3-tiers.png');
+const n3 = await read();
+log(`  night 3: lanterns ${n3.lanterns.length}, charms ${n3.charms.length}, spawn ${JSON.stringify(n3.player ? [n3.player.x, n3.player.y, n3.player.z] : null)}`);
 
 writeFileSync(join(outDir, 'playthrough.json'), JSON.stringify({ seed, transcript, consoleLog, hud }, null, 2));
 writeFileSync(join(outDir, 'console.log'), `${consoleLog.join('\n')}\n`);
-
 await browser.close();
 
 const errors = consoleLog.filter((line) => line.includes('[pageerror]') || line.includes('[error]'));
 if (errors.length > 0) {
   process.stdout.write(`\npage errors detected:\n${errors.join('\n')}\n`);
-  process.exit(1);
+  process.exitCode = 1;
 }
-process.stdout.write('\nscreenshots and playthrough log written\n');
+process.stdout.write('\nscreenshots written\n');

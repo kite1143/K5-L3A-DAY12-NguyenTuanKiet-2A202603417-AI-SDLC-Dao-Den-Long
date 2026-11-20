@@ -1,5 +1,21 @@
 # Ghi chú & retro
 
+## Phase 2
+
+**Đạt:** toàn bộ 54 acceptance criteria của [spec Phase 2](spec-phase-2.md) — 89/89 test, 12 scenario headless, tất định, 59,7 FPS trên GPU thật, HUD đủ 7 thành phần, chuỗi menu → giới thiệu → chơi → kết quả (thua thật) → chơi lại → Đêm 2 → Đêm 3.
+
+**Hỏng phase trước?** Không hỏng, nhưng **phải viết lại** gần như toàn bộ test: ticket yêu cầu thay mọi số liệu tự chọn bằng số chuẩn, và đổi nghĩa `per_mote` (tính khi nạp thay vì khi nhặt). Đây là thay đổi có chủ đích của khách hàng, nên tôi sửa test và ghi lý do trong `CHANGELOG.md` thay vì giữ test cũ.
+
+**Điều cần chỉnh cho phase 3–4:**
+1. **Bình Minh** (thắng cả 3 đêm) chưa có bằng chứng ảnh — cần quay trong video Phase 4.
+2. **Tháp chuông** hiện không chặn đường; nếu ticket sau nói là vật cản thì phải thêm vào `stepWorld` và test.
+3. **Điều khiển trên không** đang để đầy đủ (ticket chỉ nói "không đầy đủ"); nếu giảng viên siết thì đổi ở `movePlayer` và cập nhật test.
+4. Bộ test hiện chạy ~2 giây; vẫn còn chỗ để thêm scenario hồi quy giữa các phase.
+
+**Cách dùng token:** ước tính ~3,8 triệu token vào / ~120k ra (xem [nhật ký AI](ai-journal.md)). Chỗ tiết kiệm nhiều nhất ở Phase 2 là **viết acceptance criteria trước khi code** — mỗi lần AI định làm sai, tôi chỉ cần đối chiếu một dòng AC thay vì đọc lại cả ticket.
+
+**Bài học:** ba lỗi tốn thời gian nhất của Phase 2 đều **không** phải lỗi logic game: (a) test tự viết sai (đặt `carried` sai cấp), (b) công cụ sinh file của Windows (BOM/mảng lạ), (c) đo hiệu năng sai môi trường (SwiftShader). Cả ba đã thành một dòng trong bảng bẫy của `AGENTS.md`.
+
 ## Phase 1
 
 **Đạt:** toàn bộ 12 yêu cầu gameplay của PRD-0 và 13 điểm của Test Contract v1.0 (xem [bằng chứng](../proof/phase-1/summary.md)). Game chơi được từ đầu tới khi thắng/thua và chơi lại được; bot chơi thật trong trình duyệt thắng Đêm 1.

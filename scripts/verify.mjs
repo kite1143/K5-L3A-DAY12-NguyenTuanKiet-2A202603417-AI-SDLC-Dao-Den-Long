@@ -92,6 +92,38 @@ function decimalsOk(text) {
   return !/-?\d+\.\d{4,}/.test(text);
 }
 
+// --- palette from Ticket-02 part 3 -----------------------------------------
+function paletteCheck() {
+  const expected = {
+    skyNight: '#0E1430',
+    mist: '#1B2350',
+    grass: '#2F5D50',
+    sand: '#C9B48A',
+    wood: '#6B4A2F',
+    cloudSea: '#12384A',
+    lanternLit: '#FFB347',
+    lanternCore: '#FFE9B0',
+    lanternOff: '#5B5F6E',
+    moteCore: '#FFF6C2',
+    moteHalo: '#FFE58A',
+    shadeBody: '#120A1A',
+    shadeRim: '#7A3CFF',
+    shadeStunned: '#3A3450',
+    robe: '#E8E2D0',
+    scarf: '#C8102E',
+    gold: '#F2C14E',
+    drifter: '#8FA3B8',
+    danger: '#FF5A5F',
+    uiText: '#F5F1E6',
+  };
+  const source = readFileSync(join(root, 'src', 'core', 'config.ts'), 'utf8');
+  const problems = [];
+  for (const [key, hex] of Object.entries(expected)) {
+    if (!source.includes(`'${hex}'`)) problems.push(`${key} ${hex} is not in the palette`);
+  }
+  return problems;
+}
+
 function validateJsonl(text) {
   const problems = [];
   const lines = text.trimEnd().split('\n').filter(Boolean);
@@ -111,10 +143,55 @@ function validateJsonl(text) {
   if (parsed.at(-1)?.type !== 'end') problems.push('last line must be the end record');
   for (const obj of parsed) {
     if (obj.type === 'snapshot') {
-      for (const key of ['tick', 'sim_tick', 'state', 'time_left_s', 'score', 'player', 'lanterns', 'shades', 'motes_active']) {
+      for (const key of [
+        'tick',
+        'sim_tick',
+        'state',
+        'night',
+        'wind',
+        'time_left_s',
+        'score',
+        'player',
+        'lanterns',
+        'shades',
+        'drifters',
+        'charms',
+        'motes',
+        'motes_active',
+      ]) {
         if (!(key in obj)) problems.push(`snapshot tick ${obj.tick} missing ${key}`);
       }
-      if (!['playing', 'won', 'lost'].includes(obj.state)) problems.push(`snapshot tick ${obj.tick}: bad state ${obj.state}`);
+      if (!['playing', 'won', 'lost', 'paused'].includes(obj.state)) {
+        problems.push(`snapshot tick ${obj.tick}: bad state ${obj.state}`);
+      }
+      if (obj.wind && !('active' in obj.wind && 'dir_deg' in obj.wind)) problems.push('wind needs active + dir_deg');
+      for (const key of ['pos', 'vel', 'flames', 'carried', 'grounded', 'invuln', 'dash_cd_s', 'pulse_cd_s', 'charm_s']) {
+        if (!(key in obj.player)) problems.push(`snapshot tick ${obj.tick}: player.${key} missing`);
+      }
+      for (const mote of obj.motes) {
+        if (!('id' in mote && 'pos' in mote && 'kind' in mote && 'ttl_s' in mote)) {
+          problems.push(`mote missing id/pos/kind/ttl_s at tick ${obj.tick}`);
+          break;
+        }
+      }
+      for (const shade of obj.shades) {
+        if (!['spawning', 'wander', 'chase', 'recoil', 'stunned'].includes(shade.state)) {
+          problems.push(`bad shade state ${shade.state}`);
+          break;
+        }
+      }
+      for (const drifter of obj.drifters) {
+        if (!('id' in drifter && 'pos' in drifter && 'state' in drifter && 'stolen' in drifter)) {
+          problems.push(`drifter missing fields at tick ${obj.tick}`);
+          break;
+        }
+      }
+      for (const charm of obj.charms) {
+        if (!('id' in charm && 'available' in charm && 'respawn_s' in charm)) {
+          problems.push(`charm missing fields at tick ${obj.tick}`);
+          break;
+        }
+      }
     } else if (obj.type === 'event') {
       for (const key of ['tick', 'name', 'data']) {
         if (!(key in obj)) problems.push(`event at line for tick ${obj.tick} missing ${key}`);
@@ -131,7 +208,7 @@ function validateJsonl(text) {
   for (let i = 1; i < snapshotTicks.length; i += 1) {
     if (snapshotTicks[i] <= snapshotTicks[i - 1]) problems.push('snapshot ticks are not increasing');
   }
-  if (!decimalsOk(text)) problems.push('coordinates with more than 3 decimals');
+  if (!decimalsOk(text)) problems.push('coordinates with more than 4 decimals');
   return problems;
 }
 
@@ -143,7 +220,7 @@ for (const entry of manifest) {
     '--seed',
     String(entry.seed),
     '--night',
-    '1',
+    String(entry.night ?? 1),
     '--ticks',
     String(entry.ticks),
     '--out',
@@ -226,7 +303,7 @@ process.stdout.write('\n== artefacts ==\n');
 process.stdout.write('\n== contract ==\n');
 {
   const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
-  record('contract_version is 1.0', contract.contract_version === '1.0', contract.contract_version);
+  record('contract_version is 1.1', contract.contract_version === '1.1', contract.contract_version);
   record('tuning is fully declared', Object.values(contract.tuning).every((v) => v !== undefined), 'no undefined values');
   const help = spawnSync(process.execPath, [join('dist', 'headless', 'main.js'), '--ticks', '1'], {
     cwd: root,
@@ -235,9 +312,15 @@ process.stdout.write('\n== contract ==\n');
   record('bad CLI usage exits non-zero', help.status !== 0, `exit ${help.status}`);
 }
 
+// ---------------------------------------------------------------- 6. palette --
+process.stdout.write('\n== palette ==\n');
+{
+  const problems = paletteCheck();
+  record('Ticket-02 palette is present in src/core/config.ts', problems.length === 0, problems[0] ?? 'all 20 colours');
+}
+
 // ----------------------------------------------------------------- report ----
-const cpu = cpus()[0]?.model ?? 'unknown CPU';
-const report = `# Verify report — ${phase}
+const cpu = cpus()[0]?.model ?? 'unknown CPU';const report = `# Verify report — ${phase}
 
 Generated by \`node scripts/verify.mjs ${phase}\` on ${new Date().toISOString()}.
 
