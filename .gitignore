@@ -1,0 +1,10 @@
+node_modules/
+dist/core/
+dist/web/
+out/
+*.log
+.env
+.env.*
+.DS_Store
+
+.tmp/

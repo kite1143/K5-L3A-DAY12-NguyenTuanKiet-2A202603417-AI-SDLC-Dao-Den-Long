@@ -1,0 +1,9 @@
+# Keep every text file LF in the repo and in working trees, so shell scripts and
+# the committed headless bundle behave the same on Windows, macOS and Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.woff binary
+*.woff2 binary
