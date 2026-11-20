@@ -1,8 +1,0 @@
-{
-  "frames": [
-    { "tick": 0, "move": [0, 1], "cam_yaw_deg": 0 },
-    { "tick": 200, "move": [0, 0] },
-    { "tick": 205, "interact": true },
-    { "tick": 206, "interact": false }
-  ]
-}

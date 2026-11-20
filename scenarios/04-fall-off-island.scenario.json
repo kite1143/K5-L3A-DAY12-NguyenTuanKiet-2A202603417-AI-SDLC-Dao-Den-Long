@@ -1,0 +1,26 @@
+﻿{
+    "player":  {
+                   "pos":  [
+                               0,
+                               0,
+                               39
+                           ],
+                   "flames":  3,
+                   "carried":  4
+               },
+    "random_drifters":  false,
+    "charms":  [
+
+               ],
+    "drifters":  [
+
+                 ],
+    "random_motes":  false,
+    "shades":  [
+
+               ],
+    "motes":  [
+
+              ],
+    "random_shades":  false
+}

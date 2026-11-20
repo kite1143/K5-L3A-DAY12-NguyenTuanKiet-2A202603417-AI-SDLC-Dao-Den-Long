@@ -8,13 +8,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { LANTERN_LAYOUT, TUNING } from '../dist/core/index.js';
+import { NIGHT_MAPS, PALETTE, TUNING, ambientForLit } from '../dist/core/index.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
 
-test('game.contract.json declares contract_version 1.0 and a team id', () => {
-  assert.equal(contract.contract_version, '1.0');
+test('game.contract.json declares contract_version 1.1 and a team id', () => {
+  assert.equal(contract.contract_version, '1.1');
   assert.match(contract.team, /^2A202603417-[a-z-]+$/);
 });
 
@@ -43,6 +43,8 @@ test('tuning covers every key the contract requires', () => {
     'pulse_cost',
     'pulse_radius',
     'night1_duration_s',
+    'night2_duration_s',
+    'night3_duration_s',
     'flames',
     'invuln_s',
     'hit_drop_ratio',
@@ -53,6 +55,9 @@ test('tuning covers every key the contract requires', () => {
     'shade_speed',
     'shade_hit_radius',
     'fall_enabled',
+    'dash_speed',
+    'dash_duration_s',
+    'dash_cooldown_s',
     'score',
   ];
   assert.deepEqual(Object.keys(contract.tuning).sort(), [...required].sort());
@@ -65,20 +70,88 @@ test('tuning covers every key the contract requires', () => {
   ]);
 });
 
-test('declared lantern count matches the actual Night 1 layout', () => {
-  assert.equal(contract.tuning.lantern_count_night1, LANTERN_LAYOUT.length);
+test('tuning carries the canonical numbers from Ticket-02', () => {
+  const expected = {
+    player_speed: 6.0,
+    carry_capacity: 10,
+    lantern_cost: 10,
+    lantern_count_night1: 5,
+    pickup_radius: 1.0,
+    interact_radius: 2.0,
+    pulse_cost: 3,
+    pulse_radius: 5.0,
+    night1_duration_s: 300,
+    night2_duration_s: 330,
+    night3_duration_s: 360,
+    flames: 3,
+    invuln_s: 1.5,
+    pulse_stun_s: 2.0,
+    pulse_push_m: 4.0,
+    pulse_cooldown_s: 3.0,
+    safe_radius: 6.0,
+    shade_speed: 4.0,
+    shade_hit_radius: 1.0,
+    dash_speed: 14.0,
+    dash_duration_s: 0.2,
+    dash_cooldown_s: 1.5,
+    fall_enabled: true,
+  };
+  for (const [key, value] of Object.entries(expected)) {
+    assert.equal(contract.tuning[key], value, `tuning.${key}`);
+  }
+  assert.deepEqual(contract.tuning.score, {
+    per_mote: 10,
+    per_lantern: 100,
+    per_stun: 5,
+    per_second_left: 2,
+    per_flame_left: 50,
+  });
 });
 
-test('tuning values are numbers (or the declared booleans) and sane', () => {
-  for (const [key, value] of Object.entries(contract.tuning)) {
-    if (key === 'score') continue;
-    assert.ok(
-      typeof value === 'number' || typeof value === 'boolean',
-      `tuning.${key} must be a number or boolean`,
-    );
-  }
-  assert.ok(contract.tuning.player_speed > contract.tuning.shade_speed, 'the player must outrun shades');
-  assert.ok(contract.tuning.pickup_radius > 0);
-  assert.ok(contract.tuning.interact_radius > contract.tuning.pickup_radius);
-  assert.equal(contract.tuning.fall_enabled, false, 'Phase 1 disables falling; documented in README');
+test('declared lantern count matches the Night 1 map', () => {
+  assert.equal(contract.tuning.lantern_count_night1, NIGHT_MAPS[1].lanterns.length);
 });
+
+test('mounting the night maps: lantern ids and durations match the ticket', () => {
+  assert.deepEqual(NIGHT_MAPS[1].lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5']);
+  assert.deepEqual(NIGHT_MAPS[2].lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5', 'L6']);
+  assert.deepEqual(NIGHT_MAPS[3].lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7']);
+  assert.equal(NIGHT_MAPS[1].durationTicks, 300 * 60);
+  assert.equal(NIGHT_MAPS[2].durationTicks, 330 * 60);
+  assert.equal(NIGHT_MAPS[3].durationTicks, 360 * 60);
+});
+
+test('Night 1 lantern positions are the canonical ones', () => {
+  assert.deepEqual(
+    NIGHT_MAPS[1].lanterns.map((l) => [l.x, l.y, l.z]),
+    [
+      [0, 0, 25],
+      [23.8, 0, 7.7],
+      [14.7, 0, -20.2],
+      [-14.7, 0, -20.2],
+      [-23.8, 0, 7.7],
+    ],
+  );
+});
+
+test('spawn point counts per night match the ticket', () => {
+  assert.equal(NIGHT_MAPS[1].moteSpots.length, 24); // 8 @12 m + 16 @33 m
+  assert.equal(NIGHT_MAPS[2].moteSpots.length, 24); // (4 + 8) per island
+  assert.equal(NIGHT_MAPS[3].moteSpots.length, 30); // 18 + 8 + 4
+  assert.equal(NIGHT_MAPS[1].shadeSpots.length, 12);
+  assert.equal(NIGHT_MAPS[2].shadeSpots.length, 16);
+  assert.equal(NIGHT_MAPS[3].shadeSpots.length, 16);
+});
+
+test('the standard palette is present and the ambient formula matches the ticket', () => {
+  assert.equal(PALETTE.lanternLit, '#FFB347');
+  assert.equal(PALETTE.shadeRim, '#7A3CFF');
+  assert.equal(PALETTE.scarf, '#C8102E');
+  closeTo(ambientForLit(0, 5), 0.15);
+  closeTo(ambientForLit(5, 5), 0.7);
+  closeTo(ambientForLit(2, 4), 0.15 + 0.55 * 0.5);
+});
+
+function closeTo(actual, expected, tolerance = 1e-12) {
+  assert.ok(Math.abs(actual - expected) <= tolerance, `expected ${expected}, got ${actual}`);
+}

@@ -1,70 +1,118 @@
 [
   {
-    "name": "01-movement-pickup-deposit",
-    "note": "walks +Z at exactly player_speed, picks 3 motes at pickup_radius, deposits them and lights L1",
+    "name": "01-night1-walk-pickup-deposit",
+    "note": "walks at 6 m/s, picks motes at pickup_radius, deposits 10 and lights L1",
+    "night": 1,
     "seed": 7,
-    "ticks": 260,
-    "snapshotEvery": 20,
-    "scenario": "01-movement-pickup-deposit.scenario.json",
-    "inputs": "01-movement-pickup-deposit.inputs.json"
+    "ticks": 400,
+    "snapshotEvery": 50,
+    "scenario": "01-night1-walk-pickup-deposit.scenario.json",
+    "inputs": "01-night1-walk-pickup-deposit.inputs.json"
   },
   {
-    "name": "02-win-all-lit",
-    "note": "lighting the fifth lantern ends the night with won/all_lit and stops early",
-    "seed": 11,
-    "ticks": 30,
-    "snapshotEvery": 10,
-    "scenario": "02-win-all-lit.scenario.json",
-    "inputs": "02-win-all-lit.inputs.json"
+    "name": "02-dash",
+    "note": "dash covers 2.8 m in 12 ticks at 14 m/s and then waits 1.5 s",
+    "night": 1,
+    "seed": 3,
+    "ticks": 120,
+    "snapshotEvery": 15,
+    "scenario": "02-dash.scenario.json",
+    "inputs": "02-dash.inputs.json"
   },
   {
-    "name": "03-pulse-stuns-shade",
-    "note": "pulse stuns S1, pushes it pulse_push_m away, then the stun expires and it chases again",
+    "name": "03-pulse-stun",
+    "note": "pulse costs 3 motes, stuns for 120 ticks and pushes the shade 4 m",
+    "night": 1,
     "seed": 3,
     "ticks": 200,
-    "snapshotEvery": 10,
-    "scenario": "03-pulse-stuns-shade.scenario.json",
-    "inputs": "03-pulse-stuns-shade.inputs.json"
+    "snapshotEvery": 20,
+    "scenario": "03-pulse-stun.scenario.json",
+    "inputs": "03-pulse-stun.inputs.json"
   },
   {
-    "name": "04-ink-hit-drops-light",
-    "note": "a touch costs one flame and drops hit_drop_ratio of the bag; invuln_s spaces the next hit 90 ticks later",
+    "name": "04-fall-off-island",
+    "note": "walking off Night 1 costs a flame and every carried mote, then respawns",
+    "night": 1,
     "seed": 5,
-    "ticks": 120,
-    "snapshotEvery": 10,
-    "scenario": "04-ink-hit-drops-light.scenario.json",
-    "inputs": "04-ink-hit-drops-light.inputs.json"
+    "ticks": 220,
+    "snapshotEvery": 40,
+    "scenario": "04-fall-off-island.scenario.json",
+    "inputs": "04-fall-off-island.inputs.json"
   },
   {
-    "name": "05-dawn-lost",
-    "note": "running out of night time ends the run with lost/dawn at exactly time_left_s",
+    "name": "05-pause",
+    "note": "pause freezes sim_tick, the clock and spawn timers while tick keeps counting",
+    "night": 1,
+    "seed": 2,
+    "ticks": 80,
+    "snapshotEvery": 10,
+    "scenario": "05-pause.scenario.json",
+    "inputs": "05-pause.inputs.json"
+  },
+  {
+    "name": "06-night2-jump-pad",
+    "note": "the Night 2 pad launches at 14 m/s up and 24 m/s across and lands on island B",
+    "night": 2,
+    "seed": 11,
+    "ticks": 100,
+    "snapshotEvery": 20,
+    "scenario": "06-night2-jump-pad.scenario.json",
+    "inputs": "06-night2-jump-pad.inputs.json"
+  },
+  {
+    "name": "07-night2-drifter-steal",
+    "note": "Gió Lạc chases a loaded player, steals 3 motes and flees",
+    "night": 2,
     "seed": 2,
     "ticks": 200,
-    "snapshotEvery": 10,
-    "scenario": "05-dawn-lost.scenario.json",
-    "inputs": "05-dawn-lost.inputs.json"
+    "snapshotEvery": 40,
+    "scenario": "07-night2-drifter-steal.scenario.json",
+    "inputs": "07-night2-drifter-steal.inputs.json"
   },
   {
-    "name": "06-safe-haven",
-    "note": "a lit lantern keeps Bóng Mực outside safe_radius, so the player cannot be touched",
+    "name": "08-night2-charm",
+    "note": "Bùa Gió on the bridge: 7.2 m/s and no dash cooldown",
+    "night": 2,
     "seed": 4,
     "ticks": 120,
     "snapshotEvery": 20,
-    "scenario": "06-safe-haven.scenario.json",
-    "inputs": "06-safe-haven.inputs.json"
+    "scenario": "08-night2-charm.scenario.json",
+    "inputs": "08-night2-charm.inputs.json"
   },
   {
-    "name": "07-default-island",
-    "note": "the shipped Night 1 with random motes and random shade spawns (tick 360 and 960)",
+    "name": "09-night3-tier-pad",
+    "note": "the Night 3 pad lifts the player from tier 1 onto the tier 2 disc",
+    "night": 3,
+    "seed": 6,
+    "ticks": 120,
+    "snapshotEvery": 20,
+    "scenario": "09-night3-tier-pad.scenario.json",
+    "inputs": "09-night3-tier-pad.inputs.json"
+  },
+  {
+    "name": "10-night3-wind",
+    "note": "the Night 3 gust window opens at tick 480 and pushes the player 2 m/s",
+    "night": 3,
+    "seed": 5,
+    "ticks": 800,
+    "snapshotEvery": 80,
+    "scenario": "10-night3-wind.scenario.json",
+    "inputs": "10-night3-wind.inputs.json"
+  },
+  {
+    "name": "11-night1-spawn-schedule",
+    "note": "the shipped Night 1: 20 motes, shades at tick 300 and 780, one mote per 240 ticks",
+    "night": 1,
     "seed": 12,
-    "ticks": 1080,
-    "snapshotEvery": 120,
+    "ticks": 900,
+    "snapshotEvery": 100,
     "scenario": null,
     "inputs": null
   },
   {
-    "name": "08-invalid-scenario",
+    "name": "12-invalid-scenario",
     "note": "a malformed scenario file must exit 2 with a message on stderr",
+    "night": 1,
     "seed": 1,
     "ticks": 10,
     "scenario": "invalid.scenario.json",

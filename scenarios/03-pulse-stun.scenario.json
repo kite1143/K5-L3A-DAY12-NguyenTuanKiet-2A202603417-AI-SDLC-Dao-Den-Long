@@ -1,0 +1,28 @@
+﻿{
+    "player":  {
+                   "carried":  3
+               },
+    "random_drifters":  false,
+    "charms":  [
+
+               ],
+    "drifters":  [
+
+                 ],
+    "random_motes":  false,
+    "shades":  [
+                   {
+                       "pos":  [
+                                   3,
+                                   0,
+                                   0
+                               ],
+                       "id":  "S1",
+                       "state":  "chase"
+                   }
+               ],
+    "motes":  [
+
+              ],
+    "random_shades":  false
+}

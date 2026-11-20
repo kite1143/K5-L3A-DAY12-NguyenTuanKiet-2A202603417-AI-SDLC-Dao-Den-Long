@@ -1,0 +1,24 @@
+﻿{
+    "player":  {
+                   "pos":  [
+                               20,
+                               0,
+                               18
+                           ]
+               },
+    "random_drifters":  false,
+    "charms":  [
+
+               ],
+    "drifters":  [
+
+                 ],
+    "random_motes":  false,
+    "shades":  [
+
+               ],
+    "motes":  [
+
+              ],
+    "random_shades":  false
+}
