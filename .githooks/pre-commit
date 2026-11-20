@@ -1,0 +1,21 @@
+#!/bin/sh
+# Hook chặn commit khi typecheck hoặc test đỏ, và chặn commit bundle headless cũ.
+# Bật bằng: git config core.hooksPath .githooks
+set -e
+
+echo "[pre-commit] typecheck..."
+node node_modules/typescript/bin/tsc --noEmit
+
+echo "[pre-commit] tests..."
+node --test tests/ > /dev/null
+
+echo "[pre-commit] rebuilding headless bundle..."
+node node_modules/esbuild/bin/esbuild src/headless/main.ts --bundle --format=esm --platform=node --outfile=dist/headless/main.js > /dev/null
+
+if ! git diff --quiet -- dist/headless/main.js; then
+  echo "[pre-commit] dist/headless/main.js vua duoc build lai va khac ban dang stage."
+  echo "[pre-commit] Chay 'git add dist/headless/main.js' roi commit lai."
+  exit 1
+fi
+
+echo "[pre-commit] ok"
