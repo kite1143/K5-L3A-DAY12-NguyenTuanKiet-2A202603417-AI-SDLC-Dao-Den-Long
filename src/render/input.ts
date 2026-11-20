@@ -1,10 +1,8 @@
 import type { ResolvedInput } from '../core/index';
 
 export interface ControlHandlers {
-  onStart: () => void;
-  onRestart: () => void;
+  onPauseToggle: () => void;
   onGesture: () => void;
-  onMute: () => void;
 }
 
 /**
@@ -15,9 +13,11 @@ export interface ControlHandlers {
 export class Controls {
   /** cam_yaw_deg handed to the simulation (mouse drag rotates it). */
   yaw = 0;
+  /** Degrees of camera rotation per pixel of mouse drag. */
+  sensitivity = 0.0045;
 
   private readonly held = new Set<string>();
-  private readonly latched = { jump: false, interact: false, pulse: false };
+  private readonly latched = { jump: false, interact: false, pulse: false, dash: false };
   private dragging = false;
   private lastPointerX = 0;
 
@@ -32,9 +32,8 @@ export class Controls {
         if (event.code === 'Space') this.latched.jump = true;
         if (event.code === 'KeyE') this.latched.interact = true;
         if (event.code === 'KeyF') this.latched.pulse = true;
-        if (event.code === 'Enter') this.handlers.onStart();
-        if (event.code === 'KeyR') this.handlers.onRestart();
-        if (event.code === 'KeyM') this.handlers.onMute();
+        if (event.code === 'ShiftLeft' || event.code === 'ShiftRight') this.latched.dash = true;
+        if (event.code === 'Escape' || event.code === 'KeyP') this.handlers.onPauseToggle();
       }
       this.held.add(event.code);
     });
@@ -56,7 +55,7 @@ export class Controls {
       if (!this.dragging) return;
       const delta = event.clientX - this.lastPointerX;
       this.lastPointerX = event.clientX;
-      this.yaw -= delta * 0.0045;
+      this.yaw -= delta * this.sensitivity;
     });
 
     const stop = (event: PointerEvent): void => {
@@ -74,25 +73,23 @@ export class Controls {
     if (this.held.has('KeyW') || this.held.has('ArrowUp')) moveZ += 1;
     if (this.held.has('KeyS') || this.held.has('ArrowDown')) moveZ -= 1;
     // The camera sits behind Mây looking towards +Z, so in a right-handed world
-    // the player's right hand points towards -X. D must therefore send -X (and
-    // A +X) into the simulation to walk towards the side of the screen the key
-    // is on. The contract fixes how `move` maps to world space, so the flip
-    // belongs here and never in src/core.
+    // the right-hand side of the screen is -X. D therefore feeds -X.
     if (this.held.has('KeyA') || this.held.has('ArrowLeft')) moveX += 1;
     if (this.held.has('KeyD') || this.held.has('ArrowRight')) moveX -= 1;
 
-    const pressed = { ...this.latched };
+    const pressed = { ...this.latched, pause: false };
     this.latched.jump = false;
     this.latched.interact = false;
     this.latched.pulse = false;
+    this.latched.dash = false;
 
     return { moveX, moveZ, yawDeg: this.yaw, pressed };
   }
 
-  /** Drop queued actions while an overlay is up. */
   discard(): void {
     this.latched.jump = false;
     this.latched.interact = false;
     this.latched.pulse = false;
+    this.latched.dash = false;
   }
 }

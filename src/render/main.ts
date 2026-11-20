@@ -1,20 +1,80 @@
 import * as THREE from 'three';
-import { createWorld, stepWorld, TUNING } from '../core/index';
-import type { SimEvent, World } from '../core/index';
+import { NIGHT_MAPS, TUNING, createWorld, stepWorld } from '../core/index';
+import type { NightId, SimEvent, World } from '../core/index';
 import { loadProps } from './assets';
+import type { PropSet } from './assets';
 import { Sfx } from './audio';
 import { GameView } from './entities';
 import { Hud } from './hud';
 import { Controls } from './input';
 import { createStage } from './scene';
+import type { Stage } from './scene';
 import './style.css';
+
+const NIGHT_QUOTES: Record<NightId, string> = {
+  1: 'Đảo Bến quen lối. Đêm nay sương đen đã nuốt hết ánh sáng, và năm ngọn đèn lớn đã tắt.',
+  2: 'Qua cầu tre là Đảo Cau. Gió Lạc hay lượn ở đây, chúng thích đom đóm của người giữ đèn.',
+  3: 'Đảo Chuông có ba tầng. Lên tới đỉnh bằng bục nhảy, nhưng gió trên cao rất mạnh.',
+};
+
+const SETTINGS_KEY = 'dao-den-long.settings.v1';
+const BEST_KEY = 'dao-den-long.best.v1';
+
+interface Settings {
+  volume: number;
+  sensitivity: number;
+}
+
+function loadSettings(): Settings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<Settings>;
+      return {
+        volume: typeof parsed.volume === 'number' ? parsed.volume : 0.3,
+        sensitivity: typeof parsed.sensitivity === 'number' ? parsed.sensitivity : 100,
+      };
+    }
+  } catch {
+    // ignore a corrupt settings blob
+  }
+  return { volume: 0.3, sensitivity: 100 };
+}
+
+function saveSettings(settings: Settings): void {
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  } catch {
+    // storage may be unavailable
+  }
+}
+
+function loadBest(): number {
+  const raw = Number.parseInt(localStorage.getItem(BEST_KEY) ?? '0', 10);
+  return Number.isFinite(raw) ? raw : 0;
+}
+
+function saveBest(score: number): void {
+  try {
+    localStorage.setItem(BEST_KEY, String(score));
+  } catch {
+    // ignore
+  }
+}
+
+function randomBaseSeed(): number {
+  const fromUrl = new URLSearchParams(window.location.search).get('seed');
+  if (fromUrl) {
+    const parsed = Number.parseInt(fromUrl, 10);
+    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+  }
+  return 1 + Math.floor(Math.random() * 999_999);
+}
 
 const app = document.getElementById('app');
 if (!app) throw new Error('#app is missing from index.html');
 
-// Exterior props (Polyfork, CC BY 4.0). Loading never rejects: a missing file
-// just leaves the procedural stand-in in place.
-const props = await loadProps((loaded, total) => {
+const props: PropSet = await loadProps((loaded, total) => {
   const boot = document.getElementById('boot');
   if (boot) boot.textContent = `Đang tải đảo… ${loaded}/${total}`;
 });
@@ -28,90 +88,103 @@ renderer.domElement.className = 'game-canvas';
 app.appendChild(renderer.domElement);
 document.getElementById('boot')?.remove();
 
-const stage = createStage(props);
-const view = new GameView(stage, props);
 const sfx = new Sfx();
+const settings = loadSettings();
 
-let world: World = createWorld(randomSeed(), null);
-let started = false;
-let ended = false;
+type Phase = 'menu' | 'intro' | 'playing' | 'paused' | 'result' | 'dawn';
+let phase: Phase = 'menu';
+let night: NightId = 1;
+let totalScore = 0;
+let bestScore = loadBest();
+let baseSeed = randomBaseSeed();
+let world: World = createWorld(baseSeed, 1, null);
+let stage: Stage = createStage(1, world.map, props);
+let view: GameView = new GameView(stage, props);
+view.rebuild(world);
 let accumulator = 0;
 let elapsed = 0;
+let lastCountdownSecond = -1;
 
-const hud = new Hud({
-  onStart: () => start(),
-  onRestart: () => restart(),
-});
+const hudHandlers = {
+  onPlay: () => {
+    totalScore = 0;
+    showNightIntro(1);
+  },
+  onRestartNight: () => startNight(night),
+  onNextNight: () => {
+    if (night < 3) showNightIntro((night + 1) as NightId);
+    else {
+      phase = 'dawn';
+      hud.showDawn(totalScore, hudHandlers);
+    }
+  },
+  onResume: () => {
+    phase = 'playing';
+    hud.hideOverlay();
+  },
+  onMenu: () => {
+    phase = 'menu';
+    hud.setVisible(false);
+    hud.showMenu(bestScore);
+  },
+  onSettings: () => hud.showSettings(Math.round(settings.volume * 100), settings.sensitivity),
+  onCloseSettings: () => hud.hideSettings(),
+  onVolume: (value: number) => {
+    settings.volume = value / 100;
+    sfx.setVolume(settings.volume);
+    saveSettings(settings);
+  },
+  onSensitivity: (value: number) => {
+    settings.sensitivity = value;
+    controls.sensitivity = 0.0045 * (value / 100);
+    saveSettings(settings);
+  },
+};
+
+const hud = new Hud(hudHandlers);
 
 const controls = new Controls({
-  onStart: () => start(),
-  onRestart: () => restart(),
   onGesture: () => sfx.resume(),
-  onMute: () => {
-    const muted = sfx.toggleMute();
-    document.body.classList.toggle('muted', muted);
-  },
+  onPauseToggle: () => togglePause(),
 });
 controls.attach(renderer.domElement);
+controls.sensitivity = 0.0045 * (settings.sensitivity / 100);
+sfx.setVolume(settings.volume);
 
-view.rebuild(world);
-hud.update(world);
-hud.showIntro();
-
-function randomSeed(): number {
-  const fromUrl = new URLSearchParams(window.location.search).get('seed');
-  if (fromUrl) {
-    const parsed = Number.parseInt(fromUrl, 10);
-    if (Number.isFinite(parsed) && parsed >= 0) return parsed;
+function togglePause(): void {
+  if (phase === 'playing') {
+    phase = 'paused';
+    hud.showPause(hudHandlers);
+  } else if (phase === 'paused') {
+    phase = 'playing';
+    hud.hideOverlay();
   }
-  return 1 + Math.floor(Math.random() * 999_999);
 }
 
-/**
- * Read-only inspection hook plus camera control, used by scripts/shots.mjs to
- * play the game automatically and capture proof screenshots. It cannot change
- * gameplay state.
- */
-function installDebugHook(): void {
-  (window as unknown as { __dao: unknown }).__dao = {
-    seed: world.seed,
-    snapshot: () => ({
-      state: world.state,
-      score: world.score,
-      tick: world.tick,
-      timeLeftTicks: world.timeLeftTicks,
-      player: { ...world.player },
-      motes: world.motes.filter((m) => m.active).map((m) => ({ id: m.id, x: m.x, z: m.z })),
-      lanterns: world.lanterns.map((l) => ({ id: l.id, x: l.x, z: l.z, lit: l.lit, deposited: l.deposited })),
-      shades: world.shades.map((s) => ({ id: s.id, x: s.x, z: s.z, state: s.state })),
-    }),
-    setYaw: (deg: number) => {
-      controls.yaw = deg;
-    },
-    // How many shade meshes actually exist in the scene: the screenshot bot
-    // compares this with the simulation so a spawn that never gets drawn fails
-    // loudly instead of silently.
-    renderedShades: () => view.shadeCount,
-  };
+function showNightIntro(next: NightId): void {
+  night = next;
+  phase = 'intro';
+  hud.showNightIntro(
+    next,
+    NIGHT_MAPS[next].name,
+    NIGHT_QUOTES[next],
+    () => startNight(next),
+  );
 }
 
-function start(): void {
-  if (started) return;
-  started = true;
-  sfx.resume();
-  hud.hideOverlay();
-  controls.discard();
-}
-
-function restart(): void {
-  world = createWorld(randomSeed(), null);
+function startNight(next: NightId): void {
+  night = next;
+  world = createWorld(baseSeed + next * 1000, next, null);
+  stage = createStage(next, world.map, props);
+  view = new GameView(stage, props);
   view.rebuild(world);
-  ended = false;
-  started = true;
   accumulator = 0;
+  lastCountdownSecond = -1;
+  phase = 'playing';
   hud.hideOverlay();
-  hud.update(world);
+  hud.setVisible(true);
   controls.discard();
+  sfx.resume();
   installDebugHook();
 }
 
@@ -129,22 +202,47 @@ function handleEvents(events: SimEvent[]): void {
         break;
       case 'pulse':
         sfx.pulse();
-        view.flashPulse(world.player.x, world.player.z);
+        view.flashPulse(world.player.x, world.player.y, world.player.z);
+        break;
+      case 'dash':
+        sfx.dash();
+        break;
+      case 'charm_picked':
+        sfx.charm();
+        break;
+      case 'drifter_steal':
+        sfx.drifter();
+        break;
+      case 'drifter_drop':
+        sfx.pickup();
         break;
       case 'player_hit':
         sfx.hit();
         break;
       case 'game_over':
-        ended = true;
-        hud.showEnd(world);
-        hud.setHint('');
-        if (world.state === 'won') sfx.win();
-        else sfx.lose();
+        finishNight();
         break;
       default:
         break;
     }
   }
+}
+
+function finishNight(): void {
+  const won = world.state === 'won';
+  if (won) {
+    totalScore += world.score;
+    if (totalScore > bestScore) {
+      bestScore = totalScore;
+      saveBest(bestScore);
+    }
+  }
+  phase = 'result';
+  const reason = won ? 'all_lit' : world.timeLeftTicks <= 0 ? 'Hết giờ — trời đã sáng' : 'Hết ngọn lửa';
+  hud.showResult(won, night, world.score, reason, hudHandlers);
+  hud.setVisible(false);
+  if (won) sfx.win();
+  else sfx.lose();
 }
 
 const cameraTarget = new THREE.Vector3();
@@ -160,32 +258,48 @@ function updateCamera(dt: number, yawDeg: number): void {
     world.player.y + height,
     target.z - Math.cos(yaw) * distance,
   );
-  const blend = 1 - Math.exp(-9 * dt);
-  stage.camera.position.lerp(desiredCamera, blend);
+  stage.camera.position.lerp(desiredCamera, 1 - Math.exp(-9 * dt));
   cameraTarget.copy(target);
   stage.camera.lookAt(cameraTarget);
 }
 
-function updateHint(): void {
-  if (!started || ended) return;
-  const { player } = world;
-  if (player.carried >= TUNING.carry_capacity) {
-    hud.setHint('Đom đóm đã đầy — hãy mang về Đèn Lồng Lớn');
+function updatePromptAndArrow(): void {
+  if (phase !== 'playing') {
+    hud.setPrompt('');
+    hud.setArrow(null);
     return;
   }
+  const p = world.player;
+  let nearest: { x: number; y: number; z: number } | null = null;
+  let nearestDistance = Infinity;
   for (const lantern of world.lanterns) {
     if (lantern.lit) continue;
-    const distance = Math.hypot(lantern.x - player.x, lantern.z - player.z);
-    if (distance <= TUNING.interact_radius) {
-      hud.setHint(
-        player.carried > 0
-          ? `Nhấn E để nạp đèn (đang có ${player.carried}/${TUNING.carry_capacity} đom đóm)`
-          : 'Cần đom đóm trước khi nạp đèn',
-      );
-      return;
+    const distance = Math.hypot(lantern.x - p.x, lantern.y - p.y, lantern.z - p.z);
+    if (distance < nearestDistance) {
+      nearest = lantern;
+      nearestDistance = distance;
     }
   }
-  hud.setHint(player.carried > 0 ? 'Nhấn F để tỏa sáng xua Bóng Mực' : 'Thu thập đom đóm quanh đảo');
+
+  if (nearest && nearestDistance <= TUNING.interact_radius) {
+    hud.setPrompt(`E — Nạp ánh sáng (${p.carried}/${TUNING.lantern_cost})`);
+  } else if (p.carried >= TUNING.carry_capacity) {
+    hud.setPrompt('Đom đóm đã đầy — hãy tìm Đèn Lồng Lớn');
+  } else {
+    hud.setPrompt('');
+  }
+
+  if (!nearest) {
+    hud.setArrow(null);
+    return;
+  }
+  const yaw = (controls.yaw * Math.PI) / 180;
+  const dx = nearest.x - p.x;
+  const dz = nearest.z - p.z;
+  const forward = dx * Math.sin(yaw) + dz * Math.cos(yaw);
+  const right = dx * -Math.cos(yaw) + dz * Math.sin(yaw);
+  const angle = (Math.atan2(right, forward) * 180) / Math.PI;
+  hud.setArrow(Math.abs(angle) > 55 || forward < 0 ? angle : null);
 }
 
 const FIXED_STEP = 1 / 60;
@@ -195,7 +309,7 @@ function frame(now: number): void {
   lastTime = now;
   elapsed += dt;
 
-  if (started && !ended) {
+  if (phase === 'playing') {
     accumulator += dt;
     let steps = 0;
     while (accumulator >= FIXED_STEP && steps < 6) {
@@ -207,6 +321,12 @@ function frame(now: number): void {
       if (world.state !== 'playing') break;
     }
     if (steps >= 6) accumulator = 0;
+
+    const seconds = Math.max(0, Math.ceil(world.timeLeftTicks / 60));
+    if (seconds <= 10 && seconds !== lastCountdownSecond) {
+      lastCountdownSecond = seconds;
+      sfx.countdown();
+    }
   } else {
     controls.discard();
   }
@@ -215,16 +335,22 @@ function frame(now: number): void {
   view.update(dt);
   stage.update(elapsed);
   const litCount = world.lanterns.filter((lantern) => lantern.lit).length;
-  stage.setLitFraction(litCount / world.lanterns.length);
+  stage.setLitFraction(world.lanterns.length > 0 ? litCount / world.lanterns.length : 0);
+  stage.setWind(world.wind.active, world.wind.dirDeg);
   for (let i = 0; i < stage.lanternLights.length; i += 1) {
     const lit = world.lanterns[i]?.lit ?? false;
     const target = lit ? 26 + Math.sin(elapsed * 2.6 + i) * 3 : 0;
     stage.lanternLights[i].intensity += (target - stage.lanternLights[i].intensity) * Math.min(1, dt * 6);
   }
 
-  updateCamera(dt, controls.yaw);
-  hud.update(world);
-  updateHint();
+  if (phase === 'playing' || phase === 'paused') {
+    updateCamera(dt, controls.yaw);
+    hud.update(world, 10);
+    updatePromptAndArrow();
+  } else {
+    updateCamera(dt, controls.yaw + Math.sin(elapsed * 0.1) * 0.15);
+  }
+
   renderer.render(stage.scene, stage.camera);
   requestAnimationFrame(frame);
 }
@@ -237,8 +363,53 @@ function onResize(): void {
 }
 
 window.addEventListener('resize', onResize);
+window.addEventListener('keydown', (event) => {
+  if (event.code === 'Enter' && (phase === 'menu' || phase === 'intro' || phase === 'result' || phase === 'dawn')) {
+    hud.clickPrimary();
+  }
+});
 onResize();
 
-let lastTime = performance.now();
+/**
+ * Read-only inspection hook used by scripts/shots.mjs, plus camera yaw so the
+ * bot can aim. It cannot change gameplay state.
+ */
+function installDebugHook(): void {
+  (window as unknown as { __dao: unknown }).__dao = {
+    seed: world.seed,
+    phase: () => phase,
+    snapshot: () => ({
+      state: world.state,
+      phase,
+      night: world.night,
+      score: world.score,
+      totalScore,
+      tick: world.tick,
+      timeLeftTicks: world.timeLeftTicks,
+      wind: { active: world.wind.active, dirDeg: world.wind.dirDeg },
+      player: { ...world.player },
+      motes: world.motes
+        .filter((m) => m.active)
+        .map((m) => ({ id: m.id, x: m.x, y: m.y, z: m.z, kind: m.kind })),
+      lanterns: world.lanterns.map((l) => ({ id: l.id, x: l.x, y: l.y, z: l.z, lit: l.lit, deposited: l.deposited })),
+      shades: world.shades.map((s) => ({ id: s.id, x: s.x, y: s.y, z: s.z, state: s.state })),
+      drifters: world.drifters.map((d) => ({ id: d.id, x: d.x, y: d.y, z: d.z, state: d.state, stolen: d.stolen })),
+      charms: world.charms.map((c) => ({ id: c.id, x: c.x, y: c.y, z: c.z, available: c.available })),
+    }),
+    rendered: () => view.counts,
+    setYaw: (deg: number) => {
+      controls.yaw = deg;
+    },
+    /** Debug/automation only: jump straight to a night (same code path as the menu). */
+    startNight: (target: number) => {
+      if (target === 1 || target === 2 || target === 3) startNight(target as NightId);
+    },
+  };
+}
+
 installDebugHook();
+hud.setVisible(false);
+hud.showMenu(bestScore);
+
+let lastTime = performance.now();
 requestAnimationFrame(frame);
