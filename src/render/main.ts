@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { NIGHT_MAPS, TUNING, createWorld, stepWorld } from '../core/index';
+import { FUEL_MAX_UNITS, NIGHT_MAPS, TUNING, createWorld, fuelToDisplay, stepWorld } from '../core/index';
 import type { NightId, SimEvent, World } from '../core/index';
 import { loadProps } from './assets';
 import type { PropSet } from './assets';
@@ -23,6 +23,7 @@ const BEST_KEY = 'dao-den-long.best.v1';
 interface Settings {
   volume: number;
   sensitivity: number;
+  colorblind: boolean;
 }
 
 function loadSettings(): Settings {
@@ -33,12 +34,13 @@ function loadSettings(): Settings {
       return {
         volume: typeof parsed.volume === 'number' ? parsed.volume : 0.3,
         sensitivity: typeof parsed.sensitivity === 'number' ? parsed.sensitivity : 100,
+        colorblind: parsed.colorblind === true,
       };
     }
   } catch {
     // ignore a corrupt settings blob
   }
-  return { volume: 0.3, sensitivity: 100 };
+  return { volume: 0.3, sensitivity: 100, colorblind: false };
 }
 
 function saveSettings(settings: Settings): void {
@@ -127,8 +129,14 @@ const hudHandlers = {
     hud.setVisible(false);
     hud.showMenu(bestScore);
   },
-  onSettings: () => hud.showSettings(Math.round(settings.volume * 100), settings.sensitivity),
+  onSettings: () => hud.showSettings(Math.round(settings.volume * 100), settings.sensitivity, settings.colorblind),
   onCloseSettings: () => hud.hideSettings(),
+  onColorblind: (enabled: boolean) => {
+    settings.colorblind = enabled;
+    view.setColorblind(enabled);
+    hud.setColorblind(enabled);
+    saveSettings(settings);
+  },
   onVolume: (value: number) => {
     settings.volume = value / 100;
     sfx.setVolume(settings.volume);
@@ -172,9 +180,9 @@ function showNightIntro(next: NightId): void {
   );
 }
 
-function startNight(next: NightId): void {
+function startNight(next: NightId, scenario: Record<string, unknown> | null = null): void {
   night = next;
-  world = createWorld(baseSeed + next * 1000, next, null);
+  world = createWorld(baseSeed + next * 1000, next, scenario as never);
   stage = createStage(next, world.map, props);
   view = new GameView(stage, props);
   view.rebuild(world);
@@ -183,6 +191,8 @@ function startNight(next: NightId): void {
   phase = 'playing';
   hud.hideOverlay();
   hud.setVisible(true);
+  hud.setColorblind(settings.colorblind);
+  view.setColorblind(settings.colorblind);
   controls.discard();
   sfx.resume();
   installDebugHook();
@@ -220,7 +230,7 @@ function handleEvents(events: SimEvent[]): void {
         sfx.hit();
         break;
       case 'game_over':
-        finishNight();
+        finishNight(typeof event.data.reason === 'string' ? event.data.reason : '');
         break;
       default:
         break;
@@ -228,7 +238,7 @@ function handleEvents(events: SimEvent[]): void {
   }
 }
 
-function finishNight(): void {
+function finishNight(reason: string): void {
   const won = world.state === 'won';
   if (won) {
     totalScore += world.score;
@@ -238,8 +248,14 @@ function finishNight(): void {
     }
   }
   phase = 'result';
-  const reason = won ? 'all_lit' : world.timeLeftTicks <= 0 ? 'Hết giờ — trời đã sáng' : 'Hết ngọn lửa';
-  hud.showResult(won, night, world.score, reason, hudHandlers);
+  const lit = world.lanterns.filter((l) => l.lit).length;
+  const text =
+    reason === 'dawn_survived'
+      ? `Bình minh — ${lit}/${world.lanterns.length} đèn còn sáng`
+      : reason === 'dawn'
+        ? `Trời sáng mà chỉ còn ${lit}/${world.lanterns.length} đèn`
+        : 'Hết ngọn lửa';
+  hud.showResult(won, night, world.score, text, hudHandlers);
   hud.setVisible(false);
   if (won) sfx.win();
   else sfx.lose();
@@ -270,10 +286,11 @@ function updatePromptAndArrow(): void {
     return;
   }
   const p = world.player;
+  // Any lantern that can still take light: unlit, or lit but not full.
   let nearest: { x: number; y: number; z: number } | null = null;
   let nearestDistance = Infinity;
   for (const lantern of world.lanterns) {
-    if (lantern.lit) continue;
+    if (lantern.lit && lantern.fuelUnits >= FUEL_MAX_UNITS) continue;
     const distance = Math.hypot(lantern.x - p.x, lantern.y - p.y, lantern.z - p.z);
     if (distance < nearestDistance) {
       nearest = lantern;
@@ -282,8 +299,10 @@ function updatePromptAndArrow(): void {
   }
 
   if (nearest && nearestDistance <= TUNING.interact_radius) {
-    hud.setPrompt(`E — Nạp ánh sáng (${p.carried}/${TUNING.lantern_cost})`);
-  } else if (p.carried >= TUNING.carry_capacity) {
+    const lightable = nearest as { lit?: boolean };
+    const verb = lightable.lit ? 'Châm dầu' : 'Nạp ánh sáng';
+    hud.setPrompt(`E — ${verb} (${p.carried}/${p.capacity})`);
+  } else if (p.carried >= p.capacity) {
     hud.setPrompt('Đom đóm đã đầy — hãy tìm Đèn Lồng Lớn');
   } else {
     hud.setPrompt('');
@@ -391,8 +410,25 @@ function installDebugHook(): void {
       motes: world.motes
         .filter((m) => m.active)
         .map((m) => ({ id: m.id, x: m.x, y: m.y, z: m.z, kind: m.kind })),
-      lanterns: world.lanterns.map((l) => ({ id: l.id, x: l.x, y: l.y, z: l.z, lit: l.lit, deposited: l.deposited })),
-      shades: world.shades.map((s) => ({ id: s.id, x: s.x, y: s.y, z: s.z, state: s.state })),
+      lanterns: world.lanterns.map((l) => ({
+        id: l.id,
+        x: l.x,
+        y: l.y,
+        z: l.z,
+        lit: l.lit,
+        deposited: l.deposited,
+        fuel: fuelToDisplay(l.fuelUnits),
+        ever_lit: l.everLit,
+        relit_count: l.relitCount,
+      })),
+      shades: world.shades.map((s) => ({
+        id: s.id,
+        x: s.x,
+        y: s.y,
+        z: s.z,
+        state: s.state,
+        target_lantern_id: s.targetLanternId,
+      })),
       drifters: world.drifters.map((d) => ({ id: d.id, x: d.x, y: d.y, z: d.z, state: d.state, stolen: d.stolen })),
       charms: world.charms.map((c) => ({ id: c.id, x: c.x, y: c.y, z: c.z, available: c.available })),
     }),
@@ -401,8 +437,8 @@ function installDebugHook(): void {
       controls.yaw = deg;
     },
     /** Debug/automation only: jump straight to a night (same code path as the menu). */
-    startNight: (target: number) => {
-      if (target === 1 || target === 2 || target === 3) startNight(target as NightId);
+    startNight: (target: number, scenario: Record<string, unknown> | null = null) => {
+      if (target === 1 || target === 2 || target === 3) startNight(target as NightId, scenario);
     },
   };
 }

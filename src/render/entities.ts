@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { PALETTE, TUNING } from '../core/index';
+import { FUEL_MAX_UNITS, LOW_FUEL_UNITS, PALETTE, TUNING } from '../core/index';
 import type { World } from '../core/index';
 import { placeProp } from './assets';
 import type { PropSet } from './assets';
@@ -14,10 +14,13 @@ const C = {
   moteHalo: Number.parseInt(PALETTE.moteHalo.slice(1), 16),
   shadeBody: Number.parseInt(PALETTE.shadeBody.slice(1), 16),
   shadeRim: Number.parseInt(PALETTE.shadeRim.slice(1), 16),
+  shadeRimCb: Number.parseInt(PALETTE.shadeRimCb.slice(1), 16),
   shadeStunned: Number.parseInt(PALETTE.shadeStunned.slice(1), 16),
   robe: Number.parseInt(PALETTE.robe.slice(1), 16),
   scarf: Number.parseInt(PALETTE.scarf.slice(1), 16),
   gold: Number.parseInt(PALETTE.gold.slice(1), 16),
+  danger: Number.parseInt(PALETTE.danger.slice(1), 16),
+  dangerCb: Number.parseInt(PALETTE.dangerCb.slice(1), 16),
   drifter: Number.parseInt(PALETTE.drifter.slice(1), 16),
 };
 
@@ -37,7 +40,11 @@ interface LanternView {
   core: THREE.Mesh<THREE.SphereGeometry, THREE.MeshStandardMaterial>;
   halo: THREE.Sprite;
   ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  barFill: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+  barBack: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
+  rip: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>;
   lit: boolean;
+  low: boolean;
 }
 
 interface PulseView {
@@ -60,6 +67,7 @@ export class GameView {
   private lastX = 0;
   private lastZ = 0;
   private walkPhase = 0;
+  private shadeRimColor = C.shadeRim;
 
   constructor(
     stage: Stage,
@@ -193,13 +201,34 @@ export class GameView {
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.04;
 
-    group.add(base, pole, arm, hook, core, halo, ring);
+    // Fuel gauge: a slim bar floating beside the lantern (part 1 of Ticket-03).
+    const barBack = new THREE.Mesh(
+      new THREE.BoxGeometry(0.1, 1.2, 0.1),
+      new THREE.MeshBasicMaterial({ color: 0x1b1f2a, transparent: true, opacity: 0.75 }),
+    );
+    barBack.position.set(-0.55, 3.55, 0);
+    const barFill = new THREE.Mesh(
+      new THREE.BoxGeometry(0.12, 1.2, 0.12),
+      new THREE.MeshBasicMaterial({ color: C.core }),
+    );
+    barFill.position.set(-0.55, 3.55, 0);
+
+    // A torn-paper streak so an unlit lantern reads without relying on colour.
+    const rip = new THREE.Mesh(
+      new THREE.BoxGeometry(0.06, 0.5, 0.06),
+      new THREE.MeshBasicMaterial({ color: 0x0a0a10 }),
+    );
+    rip.position.set(0.82, 3.55, 0.28);
+    rip.rotation.z = 0.5;
+    rip.visible = false;
+
+    group.add(base, pole, arm, hook, core, halo, ring, barBack, barFill, rip);
     if (housing) {
       housing.position.set(0.82, 4.26 - 1.5, 0);
       group.add(housing);
     }
     this.root.add(group);
-    return { group, core, halo, ring, lit: false };
+    return { group, core, halo, ring, barFill, barBack, rip, lit: false, low: false };
   }
 
   private buildMote(kind: 'random' | 'dropped'): THREE.Group {
@@ -307,10 +336,31 @@ export class GameView {
         view.core.material.emissive.setHex(lantern.lit ? C.warm : 0x1d1a10);
         view.core.material.emissiveIntensity = lantern.lit ? 3.2 : 0.7;
         view.core.material.color.setHex(lantern.lit ? C.core : C.off);
+        // Colour-blind aid: an unlit lantern is also 20% smaller and torn.
+        view.group.scale.setScalar(lantern.lit ? 1 : 0.8);
+        view.rip.visible = !lantern.lit;
       }
-      const glow = lantern.lit ? 0.85 + Math.sin(elapsed * 2.4) * 0.12 : 0;
+
+      const ratio = Math.max(0, Math.min(1, lantern.fuelUnits / FUEL_MAX_UNITS));
+      const low = lantern.lit && lantern.fuelUnits < LOW_FUEL_UNITS;
+      // Slow 1 Hz blink once the fuel runs low.
+      const blink = low ? (Math.sin(elapsed * Math.PI * 2) > 0 ? 1 : 0.35) : 1;
+      const glow = lantern.lit ? (0.85 + Math.sin(elapsed * 2.4) * 0.12) * blink : 0;
       view.halo.material.opacity = glow * 0.95;
-      view.ring.material.opacity = lantern.lit ? 0.18 + Math.sin(elapsed * 1.8) * 0.03 : 0;
+      view.ring.material.opacity = lantern.lit ? (0.18 + Math.sin(elapsed * 1.8) * 0.03) * blink : 0;
+      view.core.material.emissiveIntensity = lantern.lit ? 3.2 * blink : 0.7;
+
+      view.barBack.visible = lantern.lit;
+      view.barFill.visible = lantern.lit;
+      if (lantern.lit) {
+        const height = Math.max(0.02, 1.2 * ratio);
+        view.barFill.scale.y = height / 1.2;
+        view.barFill.position.y = 3.55 - (1.2 - height) / 2;
+        view.barFill.material.color.setHex(low ? C.danger : ratio < 0.6 ? C.gold : C.core);
+        view.barFill.material.opacity = blink;
+        view.barFill.material.transparent = true;
+      }
+      view.low = low;
     }
 
     for (const charm of world.charms) {
@@ -346,13 +396,20 @@ export class GameView {
       view.position.set(shade.x, shade.y, shade.z);
       const { state } = shade;
       const spawn = state === 'spawning' ? 0.4 + 0.6 * (1 - Math.min(1, shade.stateTicksLeft / 30)) : 1;
-      const breathe = state === 'stunned' ? 0.82 : 1 + Math.sin(elapsed * 2.6 + shade.x) * 0.045;
+      const breathe = state === 'stunned' || state === 'drain' ? 0.82 : 1 + Math.sin(elapsed * 2.6 + shade.x) * 0.045;
       view.scale.setScalar(breathe * spawn);
       view.rotation.y = state === 'stunned' ? elapsed * 3 : elapsed * 0.6;
       view.rotation.x = Math.sin(elapsed * 1.3 + shade.x) * 0.12;
       const shell = view.children[1] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshBasicMaterial>;
-      shell.material.color.setHex(state === 'stunned' ? C.shadeStunned : C.shadeRim);
-      shell.material.opacity = state === 'stunned' ? 0.08 : 0.16;
+      shell.material.color.setHex(
+        state === 'stunned' || state === 'drain' ? C.shadeStunned : this.shadeRimColor,
+      );
+      shell.material.opacity = state === 'stunned' ? 0.08 : state === 'drain' ? 0.3 : 0.16;
+      const core = view.children[0] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshStandardMaterial>;
+      core.material.emissive.setHex(
+        state === 'stunned' || state === 'drain' ? C.shadeStunned : this.shadeRimColor,
+      );
+      core.material.emissiveIntensity = state === 'drain' ? 0.9 + Math.sin(elapsed * 6) * 0.3 : 0.55;
     }
 
     for (const drifter of world.drifters) {
@@ -414,6 +471,17 @@ export class GameView {
   getCameraTarget(world: World): THREE.Vector3 {
     this.cameraTarget.set(world.player.x, world.player.y + 1.55, world.player.z);
     return this.cameraTarget;
+  }
+
+  /** Colour-blind palette switch (Ticket-03 part 6). */
+  setColorblind(on: boolean): void {
+    this.shadeRimColor = on ? C.shadeRimCb : C.shadeRim;
+    for (const view of this.shades.values()) {
+      const shell = view.children[1] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshBasicMaterial>;
+      const core = view.children[0] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshStandardMaterial>;
+      shell.material.color.setHex(this.shadeRimColor);
+      core.material.emissive.setHex(this.shadeRimColor);
+    }
   }
 
   /** Counts used by the screenshot bot to prove spawned entities are drawn. */

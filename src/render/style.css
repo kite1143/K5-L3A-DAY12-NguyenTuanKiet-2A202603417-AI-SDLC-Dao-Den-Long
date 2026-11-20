@@ -144,11 +144,17 @@ body {
 }
 
 /* --- mote bar ----------------------------------------------------------- */
-.mote-bar {
+.mote-wrap {
   position: absolute;
   bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mote-bar {
   display: flex;
   gap: 6px;
   padding: 7px 10px;
@@ -156,6 +162,52 @@ body {
   border-radius: 999px;
   background: var(--panel);
   backdrop-filter: blur(9px);
+  max-width: 60vw;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.meter-label {
+  font-size: 12px;
+  color: var(--core);
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.warning {
+  position: absolute;
+  top: 92px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-6px);
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 90, 95, 0.6);
+  background: rgba(40, 8, 12, 0.75);
+  color: #ff5a5f;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.warning.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Colour-blind palette: warning turns white and keeps the ⚠ glyph. */
+.hud.colorblind .warning {
+  border-color: rgba(255, 255, 255, 0.7);
+  background: rgba(16, 16, 20, 0.85);
+  color: #ffffff;
+}
+
+.hud.colorblind .clock.urgent {
+  color: #ffffff;
 }
 
 .mote-slot {

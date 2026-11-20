@@ -1,4 +1,4 @@
-import { TUNING } from '../core/index';
+import { LOW_FUEL_UNITS, TUNING } from '../core/index';
 import type { World } from '../core/index';
 
 function must<T extends Element>(root: ParentNode, selector: string): T {
@@ -21,6 +21,7 @@ export interface HudHandlers {
   onCloseSettings: () => void;
   onVolume: (value: number) => void;
   onSensitivity: (value: number) => void;
+  onColorblind: (enabled: boolean) => void;
 }
 
 /**
@@ -48,6 +49,9 @@ export class Hud {
   private readonly settingsPanel: HTMLDivElement;
   private readonly volume: HTMLInputElement;
   private readonly sensitivity: HTMLInputElement;
+  private readonly colorblind: HTMLInputElement;
+  private readonly meterLabel: HTMLSpanElement;
+  private readonly warning: HTMLDivElement;
   private lastPrompt = '';
   private moteSlotCount = 0;
 
@@ -64,7 +68,8 @@ export class Hud {
         <div class="row"><span class="label">Đèn</span><span class="lanterns value"></span></div>
         <div class="row"><span class="label">Điểm</span><span class="score value"></span></div>
       </div>
-      <div class="mote-bar"></div>
+      <div class="mote-wrap"><div class="mote-bar"></div><span class="meter-label"></span></div>
+      <div class="warning">⚠ <span class="warning-text"></span></div>
       <div class="cooldowns">
         <div class="cd" data-kind="dash"><span class="cd-icon">⇢</span><span class="cd-text">Lướt</span><div class="cd-fill"></div></div>
         <div class="cd" data-kind="pulse"><span class="cd-icon">✦</span><span class="cd-text">Tỏa sáng</span><div class="cd-fill"></div></div>
@@ -85,6 +90,7 @@ export class Hud {
           <h1>Cài đặt</h1>
           <label>Âm lượng <input type="range" class="volume" min="0" max="100" step="1" /></label>
           <label>Độ nhạy chuột <input type="range" class="sensitivity" min="20" max="300" step="5" /></label>
+          <label>Bảng màu dễ phân biệt <input type="checkbox" class="colorblind" /></label>
           <div class="buttons"><button type="button" class="close">Xong</button></div>
         </div>
       </div>
@@ -110,10 +116,14 @@ export class Hud {
     this.settingsPanel = must<HTMLDivElement>(this.root, '.settings');
     this.volume = must<HTMLInputElement>(this.root, '.volume');
     this.sensitivity = must<HTMLInputElement>(this.root, '.sensitivity');
+    this.colorblind = must<HTMLInputElement>(this.root, '.colorblind');
+    this.meterLabel = must<HTMLSpanElement>(this.root, '.meter-label');
+    this.warning = must<HTMLDivElement>(this.root, '.warning');
 
     must<HTMLButtonElement>(this.root, '.settings .close').addEventListener('click', handlers.onCloseSettings);
     this.volume.addEventListener('input', () => handlers.onVolume(Number(this.volume.value)));
     this.sensitivity.addEventListener('input', () => handlers.onSensitivity(Number(this.sensitivity.value)));
+    this.colorblind.addEventListener('change', () => handlers.onColorblind(this.colorblind.checked));
 
     (this.root as unknown as { __handlers: HudHandlers }).__handlers = handlers;
   }
@@ -150,17 +160,26 @@ export class Hud {
     this.clock.classList.toggle('urgent', seconds <= 30);
     this.clock.classList.toggle('blink', seconds <= highlightSeconds && seconds <= 10);
 
-    if (this.moteSlotCount !== TUNING.carry_capacity) {
+    if (this.moteSlotCount !== world.player.capacity) {
       this.moteBar.innerHTML = '';
-      for (let i = 0; i < TUNING.carry_capacity; i += 1) {
+      for (let i = 0; i < world.player.capacity; i += 1) {
         const slot = document.createElement('span');
         slot.className = 'mote-slot';
         this.moteBar.appendChild(slot);
       }
-      this.moteSlotCount = TUNING.carry_capacity;
+      this.moteSlotCount = world.player.capacity;
     }
     const slots = this.moteBar.children;
     for (let i = 0; i < slots.length; i += 1) slots[i].classList.toggle('full', i < world.player.carried);
+    this.meterLabel.textContent = `${world.player.carried}/${world.player.capacity}`;
+
+    // A lit lantern under the low-fuel threshold loses its safe zone: warn the player.
+    const weak = world.lanterns.filter((l) => l.lit && l.fuelUnits < LOW_FUEL_UNITS);
+    this.warning.classList.toggle('visible', weak.length > 0);
+    if (weak.length > 0) {
+      must<HTMLSpanElement>(this.root, '.warning-text').textContent =
+        `${weak.map((l) => l.id).join(', ')} sắp cạn dầu`;
+    }
 
     const dashRatio = world.player.dashCdTicks / (TUNING.dash_cooldown_s * 60);
     const pulseRatio = world.player.pulseCdTicks / (TUNING.pulse_cooldown_s * 60);
@@ -251,10 +270,15 @@ export class Hud {
     this.button('Về menu', handlers.onMenu);
   }
 
-  showSettings(volume: number, sensitivity: number): void {
+  showSettings(volume: number, sensitivity: number, colorblind: boolean): void {
     this.settingsPanel.classList.remove('hidden');
     this.volume.value = String(volume);
     this.sensitivity.value = String(sensitivity);
+    this.colorblind.checked = colorblind;
+  }
+
+  setColorblind(enabled: boolean): void {
+    this.root.classList.toggle('colorblind', enabled);
   }
 
   hideSettings(): void {
