@@ -1,19 +1,12 @@
 # Bằng chứng Phase 4 — phát hành
 
-Tag: `phase-4`. Số liệu dưới đây do tôi tự chạy trên máy mình; **giảng viên đo lại trên máy chấm**, nên các con số này chỉ để tham khảo đúng như ticket nói.
+Tag: `phase-4`. Số đo do tôi tự chạy trên máy mình; giảng viên đo lại trên máy chấm.
 
 ## 1. Benchmark (contract v1.3)
 
-Lệnh: `node scripts/bench.mjs --seed 42 --duration 30 --out docs/proof/phase-4/bench.json`
+`node scripts/bench.mjs --seed 42 --duration 30 --out docs/proof/phase-4/bench.json`
 
-Cảnh chuẩn (giống nhau ở mọi bài, xem `src/render/bench.ts`):
-- Cửa sổ 1280×720, WebGL tăng tốc phần cứng, **vsync tắt** (`--disable-gpu-vsync --disable-frame-rate-limit`).
-- Đêm 1 đầy đủ hiệu ứng; **200 Bóng Mực** trạng thái `wander` rải đều trên đảo (golden angle, seed 42), **100 đom đóm**, L1–L3 sáng với `fuel: 100`.
-- Tắt: sinh thêm thực thể, sát thương, nhặt đom đóm, hao dầu, điều kiện kết thúc. Bóng Mực vẫn di chuyển theo luật `wander`.
-- Camera bay vòng tâm (0,0,0), bán kính 30 m, cao 15 m, 15 s/vòng, bắt đầu ở (30,15,0), ngược chiều kim đồng hồ.
-- 3 s khởi động không đo, sau đó đo đúng `--duration` giây.
-
-| Chỉ số | Kết quả của tôi | Ngưỡng |
+| Chỉ số | Kết quả | Ngưỡng |
 |---|---:|---|
 | `avg_fps` | **69,7** | ≥ 60 ✔ |
 | `p1_low_fps` | **26,9** | ≥ 30 ✘ |
@@ -22,36 +15,51 @@ Cảnh chuẩn (giống nhau ở mọi bài, xem `src/render/bench.ts`):
 | `load_ms` | 234 | ≤ 10000 ✔ |
 | `peak_mem_mb` | `null` | — |
 
-`renderer`: `three.js r180 / ANGLE (Intel Iris Xe, D3D11)`.
+Cảnh chuẩn: 1280×720, vsync tắt (`--disable-gpu-vsync --disable-frame-rate-limit`), 200 Bóng Mực `wander` rải đều (seed 42), 100 đom đóm, L1–L3 sáng `fuel: 100`, tắt sinh/sát thương/nhặt/hao dầu/kết thúc, camera vòng 30 m ở Y=15 m, 15 s/vòng, 3 s khởi động không đo.
 
-**Ghi chú trung thực:** `p1_low_fps` (trung bình của 1% khung chậm nhất) **dưới ngưỡng** trên máy tôi. Nguyên nhân là những cú giật khung không đều của trình duyệt (compositor/GC) chứ không phải tốc độ trung bình — `avg_fps` vượt ngưỡng 16%. Trong một lần đo khác cùng cảnh (vsync bật) tôi được `avg 59,9 / p1_low 53`. Hai chế độ đo cho hai kết cục khác nhau, nên con số trên máy chấm mới là con số quyết định.
+**Trung thực:** `p1_low_fps` dưới ngưỡng trên máy tôi (giật khung của trình duyệt). Cùng cảnh với vsync bật: `avg 59,9 / p1_low 53`. `peak_mem_mb` null vì trang web không đọc được RSS tiến trình.
 
-`peak_mem_mb` là `null` vì trang web không đọc được RSS của tiến trình mình (`performance.memory` chỉ cho JS heap). Đã ghi rõ trong `bench.json` và README.
+## 2. Soak
 
-## 2. Soak test
+`node --expose-gc --max-old-space-size=160 --max-semi-space-size=2 scripts/soak.mjs --seed 7 --nights 10 --out docs/proof/phase-4/soak.json`
 
-Lệnh: `node --expose-gc --max-old-space-size=160 --max-semi-space-size=2 scripts/soak.mjs --seed 7 --nights 10 --out docs/proof/phase-4/soak.json`
+**10 đêm, 0 crash, RAM 54 → 63 MB** (≤ 1,2×) ✔, 0,7 s.
 
-| Chỉ số | Kết quả | Ngưỡng |
-|---|---:|---|
-| `nights` | 10 (Đêm 1→2→3→1…, seed 7+i) | — |
-| `crashes` | **0** | = 0 ✔ |
-| `mem_start_mb` | 54 | — |
-| `mem_end_mb` | **63** | ≤ 1,2 × 54 = 64,8 ✔ |
-| `duration_s` | 0,7 | — |
+## 3. Bảng xếp hạng cục bộ
 
-Input ngẫu nhiên theo seed: đổi hướng mỗi 30 tick, 5% nhảy, 3% lướt, 2% tỏa sáng, 10% tương tác mỗi tick.
+- Lưu ở `data/leaderboard.json` do `scripts/play.mjs` quản lý; top 10, điểm giảm dần, bằng điểm thì ai đạt trước đứng trên.
+- Nhập tên sau mỗi lần kết thúc đêm: 3–12 ký tự chữ/số/`_` (cho phép tiếng Việt có dấu).
+- Màn hình "Bảng xếp hạng" từ menu chính.
+- Xuất: `node scripts/play.mjs --export-leaderboard out.json`.
 
-## 3. Những gì Phase 4 **chưa** làm xong (ghi trung thực)
+Bằng chứng thật: sau lượt bot chơi trong `scripts/demo.mjs`, file xuất ra là
 
-| Yêu cầu | Trạng thái |
+```json
+{"entries":[{"name":"KY_SU","score":0,"nights_won":0,"achieved_at":"2026-11-20T21:01:33+07:00","seed":202603417}]}
+```
+
+## 4. Trợ năng
+
+| Yêu cầu | Cài đặt |
 |---|---|
-| 1. Benchmark + `bench.json` | **Xong** (số ở trên) |
-| 2. Soak test + `soak.json` | **Xong** |
-| 3. Bảng xếp hạng cục bộ (top 10, nhập tên, màn hình menu, `--export-leaderboard`) | **Chưa làm** |
-| 4. Trợ năng: đổi phím, phụ đề/chỉ báo, giảm chuyển động, cỡ chữ ≥18px + chữ lớn | **Chưa làm** (chỉ có chế độ mù màu của Phase 3) |
-| 5. Đóng gói: README đầy đủ, CHANGELOG 4 phase, CREDITS, LICENSE, Release `v1.0.0` | README/CHANGELOG/CREDITS/LICENSE có; **Release cần tạo sau khi quay video** |
-| 6. Contract v1.3 (`bench_cmd`, `soak_cmd`) | **Xong** |
-| 7. Retro + video `.mp4` < 5 phút | Retro có; **video chưa quay** |
+| Đổi phím cho 9 hành động (4 hướng, nhảy, lướt, tương tác, tỏa sáng, tạm dừng) | Bảng "Đổi phím" trong Cài đặt, bấm rồi nhấn phím mới |
+| Phát hiện trùng phím | Báo lỗi ngay trong Cài đặt (`… đã dùng cho "Tỏa sáng"`), không nhận phím trùng |
+| Khôi phục mặc định | Nút "Khôi phục mặc định" |
+| Được lưu | `localStorage` (`dao-den-long.settings.v1`), gồm cả keymap |
+| Chỉ báo hình ảnh | Toast cho "Bóng Mực xuất hiện" (+ mũi tên đỏ chỉ hướng), "Gió sắp thổi", "Còn 10 giây", "Lx sắp cạn dầu" |
+| Giảm chuyển động | Tắt nhấp nháy đèn, nhịp "thở" của Bóng Mực, nhún nhân vật và transition CSS |
+| Cỡ chữ ≥ 18 px | `.hud { font-size: 18px }` — mọi chữ HUD dùng `em` từ mốc này |
+| Chữ lớn ×1,25 | Tùy chọn, đổi mốc thành 22,5 px |
 
-Tag `phase-4` đánh dấu trạng thái hiện tại. Phần còn thiếu ở mục 3, 4 và video là việc tiếp theo, không được tính là đã xong.
+## 5. Video demo
+
+`docs/demo/demo.mp4` — 44,7 s, 1280×720, H.264, 586 KB (dưới 5 phút, dưới 100 MB). Quay tự động bằng `scripts/demo.mjs` (Playwright), nội dung: menu → màn Bằng chứng (số bench/soak/test) → giới thiệu đêm → chơi bằng bàn phím → thua thật → nhập tên lưu điểm → bảng xếp hạng → Cài đặt (đổi phím, báo trùng phím, khôi phục mặc định, giảm chuyển động, chữ lớn) → HUD chữ lớn.
+
+Ảnh trong `screens/`: `01-menu`, `02-proof`, `03-leaderboard-empty`, `04-intro`, `05-play`, `06-result-score-entry`, `07` (màn Bằng chứng, xem ghi chú), `08-keymap-conflict`, `09-settings-accessibility`, `10-large-text-hud`.
+
+**Ghi chú trung thực:** `07-leaderboard.png` chụp đúng lúc màn "Bằng chứng" còn mở nên hiển thị số đo chứ không phải danh sách xếp hạng; màn xếp hạng có trong `03` (trống) và bằng chứng có mục thật là file xuất JSON ở mục 3.
+
+## 6. Còn lại
+
+- **GitHub Release `v1.0.0`**: chưa tạo được từ máy này (không có `gh` CLI, không có token). Cần `gh release create v1.0.0 --notes ... demo.mp4` hoặc tạo tay trên GitHub kèm `docs/demo/demo.mp4` + hướng dẫn chạy.
+- `p1_low_fps` dưới ngưỡng trên máy tác giả (xem mục 1).

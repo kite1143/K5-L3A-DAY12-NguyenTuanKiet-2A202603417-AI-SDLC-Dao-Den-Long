@@ -68,6 +68,12 @@ export class GameView {
   private lastZ = 0;
   private walkPhase = 0;
   private shadeRimColor = C.shadeRim;
+  private reduceMotion = false;
+
+  /** Accessibility: stop pulsing, bobbing and blinking. */
+  setReduceMotion(on: boolean): void {
+    this.reduceMotion = on;
+  }
 
   constructor(
     stage: Stage,
@@ -323,7 +329,7 @@ export class GameView {
     this.lastX = p.x;
     this.lastZ = p.z;
     this.playerGroup.rotation.y = this.facing;
-    this.playerGroup.position.y = p.y + (p.grounded ? Math.abs(Math.sin(this.walkPhase)) * 0.045 : 0);
+    this.playerGroup.position.y = p.y + (p.grounded && !this.reduceMotion ? Math.abs(Math.sin(this.walkPhase)) * 0.045 : 0);
     this.playerGroup.visible = p.fallenTicks <= 0 || p.fallenTicks % 8 < 4;
     // Dashing makes the halo flare.
     this.playerHalo.material.opacity = p.dashTicks > 0 ? 0.85 : 0.3;
@@ -343,9 +349,11 @@ export class GameView {
 
       const ratio = Math.max(0, Math.min(1, lantern.fuelUnits / FUEL_MAX_UNITS));
       const low = lantern.lit && lantern.fuelUnits < LOW_FUEL_UNITS;
-      // Slow 1 Hz blink once the fuel runs low.
-      const blink = low ? (Math.sin(elapsed * Math.PI * 2) > 0 ? 1 : 0.35) : 1;
-      const glow = lantern.lit ? (0.85 + Math.sin(elapsed * 2.4) * 0.12) * blink : 0;
+      // Slow 1 Hz blink once the fuel runs low; off when "reduce motion" is on.
+      const blink = low && !this.reduceMotion ? (Math.sin(elapsed * Math.PI * 2) > 0 ? 1 : 0.35) : 1;
+      const glow = lantern.lit
+        ? (this.reduceMotion ? 0.85 : 0.85 + Math.sin(elapsed * 2.4) * 0.12) * blink
+        : 0;
       view.halo.material.opacity = glow * 0.95;
       view.ring.material.opacity = lantern.lit ? (0.18 + Math.sin(elapsed * 1.8) * 0.03) * blink : 0;
       view.core.material.emissiveIntensity = lantern.lit ? 3.2 * blink : 0.7;
@@ -396,7 +404,12 @@ export class GameView {
       view.position.set(shade.x, shade.y, shade.z);
       const { state } = shade;
       const spawn = state === 'spawning' ? 0.4 + 0.6 * (1 - Math.min(1, shade.stateTicksLeft / 30)) : 1;
-      const breathe = state === 'stunned' || state === 'drain' ? 0.82 : 1 + Math.sin(elapsed * 2.6 + shade.x) * 0.045;
+      const breathe =
+        state === 'stunned' || state === 'drain'
+          ? 0.82
+          : this.reduceMotion
+            ? 1
+            : 1 + Math.sin(elapsed * 2.6 + shade.x) * 0.045;
       view.scale.setScalar(breathe * spawn);
       view.rotation.y = state === 'stunned' ? elapsed * 3 : elapsed * 0.6;
       view.rotation.x = Math.sin(elapsed * 1.3 + shade.x) * 0.12;

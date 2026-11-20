@@ -46,3 +46,23 @@
 **Cách dùng token:** ước tính ~1,9 triệu token vào / ~70k ra cho Phase 1 (xem [nhật ký AI](ai-journal.md)). Chỗ tiết kiệm nhiều nhất là đưa contract cho AI trước khi thiết kế, và để AI tự chạy `tsc`/`node --test`/CLI thay vì mô tả kết quả.
 
 **Bài học:** thứ bắt được nhiều lỗi nhất không phải đọc code, mà là (a) test có con số kỳ vọng tính từ contract, và (b) ảnh chụp từ bot chơi thật. Cả hai đều là thứ tôi sẽ dựng sớm hơn nữa ở các phase sau.
+
+## Phase 4 — phát hành
+
+**Đạt:** benchmark + soak đúng contract v1.3, bảng xếp hạng cục bộ (lưu đĩa, top 10, xuất JSON), trợ năng 4 mục (đổi phím 9 hành động + báo trùng + khôi phục mặc định, chỉ báo hình ảnh, giảm chuyển động, chữ ≥18 px + chữ lớn), video demo 45 s.
+
+**Hỏng phase trước?** Không. `run_cmd` đổi từ `vite preview` sang `node scripts/play.mjs` (server tĩnh + API bảng xếp hạng) — vẫn là 3 lệnh trong README, và cần thiết để `--export-leaderboard` hoạt động.
+
+**Điều cần chỉnh:**
+1. `p1_low_fps` 26,9 < 30 trên máy tác giả — cần đo lại trên máy chấm trước khi kết luận.
+2. Release `v1.0.0` phải tạo bằng `gh` hoặc trên web GitHub.
+3. Ảnh `07-leaderboard.png` chụp nhầm màn Bằng chứng (xem proof).
+
+**Bài học tổng cho dự án:**
+- Đưa **contract vào mã** (một `TUNING` + test so sánh) giúp số chuẩn không bao giờ trôi; đây là thứ tiết kiệm nhiều điểm nhất.
+- Bộ khung `verify.mjs` + `shots.mjs` dựng từ Phase 1 đã dùng lại cho cả 3 phase sau mà gần như không phải sửa.
+- Ba lần AI sai tốn thời gian nhất đều không phải logic game: test tự viết sai, công cụ Windows (BOM/mảng), và môi trường đo (SwiftShader). Mỗi lỗi thành một dòng trong bảng bẫy `AGENTS.md`.
+
+**Tổng token ước tính cả dự án:** ~10–11 triệu token vào, ~0,35 triệu ra (Phase 1 ~1,9M · Phase 2 ~3,8M · Phase 3 ~3,0M · Phase 4 ~1,5M). Cách tiết kiệm lớn nhất: viết acceptance criteria/ADR **trước** khi code, và để script tự sinh bằng chứng thay vì mô tả lại bằng lời.
+
+**Nếu làm lại:** dựng `verify.mjs` và bot chơi thật ngay từ phút đầu; đọc trước điều khoản asset và giới hạn môi trường đo (vsync/GPU) để không phải đo lại; giữ mỗi phase đúng một tài liệu quyết định (ADR) thay vì rải trong commit message.

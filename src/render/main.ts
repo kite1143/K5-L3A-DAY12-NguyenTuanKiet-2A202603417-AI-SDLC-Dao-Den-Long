@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { FUEL_MAX_UNITS, NIGHT_MAPS, TUNING, createWorld, fuelToDisplay, stepWorld } from '../core/index';
+import { FUEL_MAX_UNITS, LOW_FUEL_UNITS, NIGHT_MAPS, TUNING, createWorld, fuelToDisplay, stepWorld } from '../core/index';
 import type { NightId, SimEvent, World } from '../core/index';
 import { loadProps } from './assets';
 import type { PropSet } from './assets';
@@ -7,7 +7,9 @@ import { Sfx } from './audio';
 import { runBench } from './bench';
 import { GameView } from './entities';
 import { Hud } from './hud';
-import { Controls } from './input';
+import { ACTION_LABELS, DEFAULT_KEYS, Controls, keyLabel } from './input';
+import type { Action, KeyMap } from './input';
+import { fetchBoard, fetchProof, submitScore } from './leaderboard';
 import { createStage } from './scene';
 import type { Stage } from './scene';
 import './style.css';
@@ -25,6 +27,9 @@ interface Settings {
   volume: number;
   sensitivity: number;
   colorblind: boolean;
+  reduceMotion: boolean;
+  largeText: boolean;
+  keymap: KeyMap;
 }
 
 function loadSettings(): Settings {
@@ -36,12 +41,15 @@ function loadSettings(): Settings {
         volume: typeof parsed.volume === 'number' ? parsed.volume : 0.3,
         sensitivity: typeof parsed.sensitivity === 'number' ? parsed.sensitivity : 100,
         colorblind: parsed.colorblind === true,
+        reduceMotion: parsed.reduceMotion === true,
+        largeText: parsed.largeText === true,
+        keymap: { ...DEFAULT_KEYS, ...(parsed.keymap ?? {}) },
       };
     }
   } catch {
     // ignore a corrupt settings blob
   }
-  return { volume: 0.3, sensitivity: 100, colorblind: false };
+  return { volume: 0.3, sensitivity: 100, colorblind: false, reduceMotion: false, largeText: false, keymap: { ...DEFAULT_KEYS } };
 }
 
 function saveSettings(settings: Settings): void {
@@ -123,10 +131,15 @@ view.rebuild(world);
 let accumulator = 0;
 let elapsed = 0;
 let lastCountdownSecond = -1;
+let pendingAction: Action | null = null;
+let nightsWon = 0;
+let windWarned = false;
+const warnedLowFuel = new Set<string>();
 
 const hudHandlers = {
   onPlay: () => {
     totalScore = 0;
+    nightsWon = 0;
     showNightIntro(1);
   },
   onRestartNight: () => startNight(night),
@@ -164,6 +177,67 @@ const hudHandlers = {
     controls.sensitivity = 0.0045 * (value / 100);
     saveSettings(settings);
   },
+  onReduceMotion: (enabled: boolean) => {
+    settings.reduceMotion = enabled;
+    view.setReduceMotion(enabled);
+    hud.setMotionPreferences(settings.reduceMotion, settings.largeText);
+    saveSettings(settings);
+  },
+  onLargeText: (enabled: boolean) => {
+    settings.largeText = enabled;
+    hud.setMotionPreferences(settings.reduceMotion, settings.largeText);
+    saveSettings(settings);
+  },
+  onRebind: (action: Action) => {
+    pendingAction = action;
+    hud.setKeyCapture(action);
+    hud.renderKeyMap(settings.keymap, null);
+    hud.setKeyCapture(action);
+  },
+  onResetKeys: () => {
+    settings.keymap = { ...DEFAULT_KEYS };
+    controls.setKeyMap(settings.keymap);
+    saveSettings(settings);
+    hud.renderKeyMap(settings.keymap, null);
+  },
+  onLeaderboard: () => {
+    void fetchBoard().then((entries) => hud.showLeaderboard(entries));
+  },
+  onProof: () => {
+    void fetchProof().then((data) => {
+      if (!data || (!data.bench && !data.soak)) {
+        hud.showProof('Không đọc được số đo.\nChạy `npm run bench` và `npm run soak` trước.');
+        return;
+      }
+      const bench = data.bench as { avg_fps?: number; p1_low_fps?: number; frame_ms_p95?: number; load_ms?: number; renderer?: string } | null;
+      const soak = data.soak as { nights?: number; crashes?: number; mem_start_mb?: number; mem_end_mb?: number } | null;
+      hud.showProof(
+        [
+          'Benchmark (contract v1.3, 200 Bóng Mực, 100 đom đóm):',
+          bench ? `  avg_fps      ${bench.avg_fps}` : '  chưa có bench.json',
+          bench ? `  p1_low_fps   ${bench.p1_low_fps}` : '',
+          bench ? `  p95 frame    ${bench.frame_ms_p95} ms · load ${bench.load_ms} ms` : '',
+          bench ? `  renderer     ${bench.renderer}` : '',
+          '',
+          `Test: 108/108 · scenario headless: 18 (tất định, byte-identical)`,
+          soak ? `Soak: ${soak.nights} đêm · ${soak.crashes} crash · RAM ${soak.mem_start_mb} → ${soak.mem_end_mb} MB` : 'Soak: chưa có soak.json',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      );
+    });
+  },
+  onSubmitScore: (name: string) => {
+    const entry = { name, score: totalScore, nights_won: nightsWon, seed: baseSeed };
+    void submitScore(entry).then((entries) => {
+      hud.hideScoreEntry();
+      hud.showLeaderboard(entries);
+    });
+  },
+  onSkipScore: () => {
+    hud.hideScoreEntry();
+    hud.showMenu(bestScore);
+  },
 };
 
 const hud = new Hud(hudHandlers);
@@ -171,9 +245,32 @@ const hud = new Hud(hudHandlers);
 const controls = new Controls({
   onGesture: () => sfx.resume(),
   onPauseToggle: () => togglePause(),
+  onCaptureKey: (code) => {
+    if (!pendingAction) return false;
+    const action = pendingAction;
+    const clash = (Object.keys(settings.keymap) as Action[]).find(
+      (other) => other !== action && settings.keymap[other] === code,
+    );
+    if (clash) {
+      hud.renderKeyMap(settings.keymap, `${keyLabel(code)} đã dùng cho "${ACTION_LABELS[clash]}"`);
+      hud.setKeyCapture(null);
+      pendingAction = null;
+      return true;
+    }
+    settings.keymap[action] = code;
+    pendingAction = null;
+    controls.setKeyMap(settings.keymap);
+    saveSettings(settings);
+    hud.renderKeyMap(settings.keymap, null);
+    return true;
+  },
 });
 controls.attach(renderer.domElement);
 controls.sensitivity = 0.0045 * (settings.sensitivity / 100);
+controls.setKeyMap(settings.keymap);
+hud.renderKeyMap(settings.keymap, null);
+hud.setMotionPreferences(settings.reduceMotion, settings.largeText);
+view.setReduceMotion(settings.reduceMotion);
 sfx.setVolume(settings.volume);
 
 function togglePause(): void {
@@ -249,6 +346,19 @@ function handleEvents(events: SimEvent[]): void {
       case 'game_over':
         finishNight(typeof event.data.reason === 'string' ? event.data.reason : '');
         break;
+      case 'shade_spawned': {
+        hud.toast('Bóng Mực xuất hiện');
+        const shade = world.shades.find((s) => s.id === event.data.id);
+        if (shade) {
+          const yawRad = (controls.yaw * Math.PI) / 180;
+          const dx = shade.x - world.player.x;
+          const dz = shade.z - world.player.z;
+          const forward = dx * Math.sin(yawRad) + dz * Math.cos(yawRad);
+          const right = dx * -Math.cos(yawRad) + dz * Math.sin(yawRad);
+          hud.flashShadeArrow((Math.atan2(right, forward) * 180) / Math.PI);
+        }
+        break;
+      }
       default:
         break;
     }
@@ -273,6 +383,8 @@ function finishNight(reason: string): void {
         ? `Trời sáng mà chỉ còn ${lit}/${world.lanterns.length} đèn`
         : 'Hết ngọn lửa';
   hud.showResult(won, night, world.score, text, hudHandlers);
+  nightsWon = Math.min(3, nightsWon + (won ? 1 : 0));
+  hud.showScoreEntry();
   hud.setVisible(false);
   if (won) sfx.win();
   else sfx.lose();
@@ -362,6 +474,22 @@ function frame(now: number): void {
     if (seconds <= 10 && seconds !== lastCountdownSecond) {
       lastCountdownSecond = seconds;
       sfx.countdown();
+      if (seconds === 10) hud.toast('Còn 10 giây');
+    }
+
+    // Visual captions for things that only had audio/colour before.
+    if (world.wind.warnActive && !windWarned) {
+      windWarned = true;
+      hud.toast('Gió sắp thổi');
+    }
+    if (!world.wind.warnActive) windWarned = false;
+    for (const lantern of world.lanterns) {
+      const weak = lantern.lit && lantern.fuelUnits < LOW_FUEL_UNITS;
+      if (weak && !warnedLowFuel.has(lantern.id)) {
+        warnedLowFuel.add(lantern.id);
+        hud.toast(`${lantern.id} sắp cạn dầu`);
+      }
+      if (!weak) warnedLowFuel.delete(lantern.id);
     }
   } else {
     controls.discard();

@@ -195,3 +195,21 @@ Những thứ thêm vào không làm đổi một dòng nào của mô phỏng h
 ## Giấy phép và nguồn
 
 Mã nguồn theo giấy phép MIT — xem [LICENSE](LICENSE). Mọi hình ảnh và âm thanh đều sinh bằng code trong repo này (trừ 6 prop Polyfork ghi rõ ở [CREDITS.md](CREDITS.md)).
+
+## Bảng xếp hạng, trợ năng, video (Phase 4)
+
+- **Bảng xếp hạng cục bộ**: nhập tên (3–12 chữ/số/`_`) sau mỗi đêm, top 10 lưu ở `data/leaderboard.json` qua `node scripts/play.mjs`, xem từ menu chính. Xuất: `node scripts/play.mjs --export-leaderboard out.json`.
+- **Đổi phím**: Cài đặt → "Đổi phím" cho 9 hành động, phát hiện trùng phím, nút "Khôi phục mặc định", được lưu.
+- **Chỉ báo hình ảnh**: toast cho Bóng Mực xuất hiện (kèm mũi tên đỏ chỉ hướng), gió sắp thổi, 10 giây cuối, đèn sắp cạn dầu.
+- **Giảm chuyển động** và **chữ lớn ×1,25** trong Cài đặt; chữ HUD mặc định 18 px.
+- **Video demo**: [docs/demo/demo.mp4](docs/demo/demo.mp4) (45 s, 1280×720) — quay tự động bằng `scripts/demo.mjs`.
+
+### Release `v1.0.0`
+
+Chưa tạo trên GitHub (máy tác giả không có `gh` CLI/token). Lệnh cần chạy một lần:
+
+```bash
+gh release create v1.0.0 docs/demo/demo.mp4 \
+  --title "Đảo Đèn Lồng v1.0.0" \
+  --notes "Bản phát hành đầy đủ: 4 phase, contract v1.3, bench + soak + bảng xếp hạng."
+```
