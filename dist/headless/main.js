@@ -63,6 +63,7 @@ function parseScenario(raw) {
   if (raw.random_shades !== void 0) out.random_shades = bool(raw.random_shades, "random_shades");
   if (raw.random_drifters !== void 0) out.random_drifters = bool(raw.random_drifters, "random_drifters");
   if (raw.wind_enabled !== void 0) out.wind_enabled = bool(raw.wind_enabled, "wind_enabled");
+  if (raw.bench !== void 0) out.bench = bool(raw.bench, "bench");
   if (raw.motes !== void 0) {
     if (!Array.isArray(raw.motes)) throw new ContractFormatError("motes must be an array");
     out.motes = raw.motes.map((m, i) => vec3(m, `motes[${i}]`));
@@ -685,6 +686,7 @@ function createWorld(seed, night = 1, scenario = null) {
     randomShades: scenario?.random_shades !== false,
     randomDrifters: scenario?.random_drifters !== false,
     windEnabled: scenario?.wind_enabled !== false,
+    bench: scenario?.bench === true,
     moteSeq: 1,
     shadeSeq: 1,
     drifterSeq: 1,
@@ -886,62 +888,66 @@ function stepWorld(w, input, out) {
     if (charm.respawnTicks > 0) charm.respawnTicks -= 1;
     if (charm.respawnTicks === 0) charm.available = true;
   }
-  let drainedByLantern = null;
-  for (const shade of w.shades) {
-    if (shade.state !== "drain" || !shade.targetLanternId) continue;
-    if (!drainedByLantern) drainedByLantern = /* @__PURE__ */ new Map();
-    drainedByLantern.set(
-      shade.targetLanternId,
-      (drainedByLantern.get(shade.targetLanternId) ?? 0) + DRAIN_UNITS_PER_TICK
-    );
-  }
-  for (const lantern of w.lanterns) {
-    if (!lantern.lit) continue;
-    lantern.fuelUnits -= FUEL_DECAY_UNITS_PER_TICK + (drainedByLantern?.get(lantern.id) ?? 0);
-  }
-  if (drainedByLantern && simTick % DRAIN_EVENT_INTERVAL_TICKS === 0) {
+  if (!w.bench) {
+    let drainedByLantern = null;
     for (const shade of w.shades) {
       if (shade.state !== "drain" || !shade.targetLanternId) continue;
-      const lantern = w.lanterns.find((l) => l.id === shade.targetLanternId);
-      if (!lantern || !lantern.lit) continue;
-      out.push({
-        tick,
-        name: "fuel_drain",
-        data: { lantern_id: lantern.id, shade_id: shade.id, fuel: fuelToDisplay(lantern.fuelUnits) }
-      });
+      if (!drainedByLantern) drainedByLantern = /* @__PURE__ */ new Map();
+      drainedByLantern.set(
+        shade.targetLanternId,
+        (drainedByLantern.get(shade.targetLanternId) ?? 0) + DRAIN_UNITS_PER_TICK
+      );
     }
-  }
-  for (const lantern of w.lanterns) {
-    if (!lantern.lit || lantern.fuelUnits > 0) continue;
-    lantern.lit = false;
-    lantern.fuelUnits = 0;
-    lantern.deposited = 0;
-    lantern.everLit = true;
-    out.push({ tick, name: "lantern_out", data: { lantern_id: lantern.id } });
+    for (const lantern of w.lanterns) {
+      if (!lantern.lit) continue;
+      lantern.fuelUnits -= FUEL_DECAY_UNITS_PER_TICK + (drainedByLantern?.get(lantern.id) ?? 0);
+    }
+    if (drainedByLantern && simTick % DRAIN_EVENT_INTERVAL_TICKS === 0) {
+      for (const shade of w.shades) {
+        if (shade.state !== "drain" || !shade.targetLanternId) continue;
+        const lantern = w.lanterns.find((l) => l.id === shade.targetLanternId);
+        if (!lantern || !lantern.lit) continue;
+        out.push({
+          tick,
+          name: "fuel_drain",
+          data: { lantern_id: lantern.id, shade_id: shade.id, fuel: fuelToDisplay(lantern.fuelUnits) }
+        });
+      }
+    }
+    for (const lantern of w.lanterns) {
+      if (!lantern.lit || lantern.fuelUnits > 0) continue;
+      lantern.lit = false;
+      lantern.fuelUnits = 0;
+      lantern.deposited = 0;
+      lantern.everLit = true;
+      out.push({ tick, name: "lantern_out", data: { lantern_id: lantern.id } });
+    }
   }
   updateWind(w, simTick);
   movePlayer(w, input, out, tick, simTick);
-  pickups(w, out, tick, simTick);
+  if (!w.bench) pickups(w, out, tick, simTick);
   if (input.pressed.interact) interact(w, out, tick);
   updateSafeZones(w);
   if (input.pressed.pulse) pulse(w, out, tick);
   moveShades(w);
   moveDrifters(w);
-  contacts(w, out, tick);
-  spawns(w, out, tick, simTick);
-  if (p.flames <= 0) {
-    finish(w, "lost", "no_flames", out, tick);
-  } else if (w.timeLeftTicks <= 0) {
-    const lit = w.lanterns.filter((l) => l.lit).length;
-    if (lit >= dawnThreshold(w.lanterns.length)) finish(w, "won", "dawn_survived", out, tick);
-    else finish(w, "lost", "dawn", out, tick);
+  if (!w.bench) contacts(w, out, tick);
+  if (!w.bench) spawns(w, out, tick, simTick);
+  if (!w.bench) {
+    if (p.flames <= 0) {
+      finish(w, "lost", "no_flames", out, tick);
+    } else if (w.timeLeftTicks <= 0) {
+      const lit = w.lanterns.filter((l) => l.lit).length;
+      if (lit >= dawnThreshold(w.lanterns.length)) finish(w, "won", "dawn_survived", out, tick);
+      else finish(w, "lost", "dawn", out, tick);
+    }
   }
   w.tick = tick;
   w.simTick = simTick;
 }
 function updateWind(w, simTick) {
   const schedule = w.map.wind;
-  if (!w.windEnabled || !schedule) {
+  if (!w.windEnabled || !schedule || w.bench) {
     w.wind.active = false;
     w.wind.warnActive = false;
     return;
@@ -1355,7 +1361,7 @@ function moveShades(w) {
       case "wander":
       case "chase": {
         const distance = distanceXZ(shade.x, shade.z, p.x, p.z);
-        if (distance <= SHADE_DETECT_RADIUS) shade.state = "chase";
+        if (distance <= SHADE_DETECT_RADIUS && !w.bench) shade.state = "chase";
         else if (shade.state === "chase" && distance > SHADE_LEAVE_RADIUS) shade.state = "wander";
         if (shade.state === "chase") {
           shade.targetLanternId = null;

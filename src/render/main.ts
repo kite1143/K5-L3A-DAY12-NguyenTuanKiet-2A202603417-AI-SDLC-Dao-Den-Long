@@ -4,6 +4,7 @@ import type { NightId, SimEvent, World } from '../core/index';
 import { loadProps } from './assets';
 import type { PropSet } from './assets';
 import { Sfx } from './audio';
+import { runBench } from './bench';
 import { GameView } from './entities';
 import { Hud } from './hud';
 import { Controls } from './input';
@@ -89,6 +90,22 @@ renderer.toneMappingExposure = 1.18;
 renderer.domElement.className = 'game-canvas';
 app.appendChild(renderer.domElement);
 document.getElementById('boot')?.remove();
+
+// --- benchmark mode (?bench=1&duration=30&seed=42) ------------------------
+const benchParams = new URLSearchParams(window.location.search);
+if (benchParams.get('bench') === '1') {
+  const durationS = Number.parseFloat(benchParams.get('duration') ?? '30');
+  const benchSeed = Number.parseInt(benchParams.get('seed') ?? '42', 10);
+  document.body.classList.add('bench-mode');
+  runBench(renderer, props, {
+    seed: Number.isFinite(benchSeed) ? benchSeed : 42,
+    durationS: Number.isFinite(durationS) && durationS > 0 ? durationS : 30,
+  });
+} else {
+  startGame(renderer, props);
+}
+
+function startGame(renderer: THREE.WebGLRenderer, props: PropSet): void {
 
 const sfx = new Sfx();
 const settings = loadSettings();
@@ -449,3 +466,4 @@ hud.showMenu(bestScore);
 
 let lastTime = performance.now();
 requestAnimationFrame(frame);
+}

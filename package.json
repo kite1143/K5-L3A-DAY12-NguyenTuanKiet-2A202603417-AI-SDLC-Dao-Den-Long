@@ -15,7 +15,9 @@
     "start": "vite preview --port 5173 --strictPort",
     "test": "npm run build:core && node --test tests/",
     "verify": "node scripts/verify.mjs",
-    "assets": "node scripts/fetch-assets.mjs"
+    "assets": "node scripts/fetch-assets.mjs",
+    "bench": "node scripts/bench.mjs",
+    "soak": "node --expose-gc --max-old-space-size=160 --max-semi-space-size=2 scripts/soak.mjs"
   },
   "dependencies": {
     "three": "^0.180.0"
@@ -24,6 +26,7 @@
     "@types/node": "^22.10.0",
     "@types/three": "^0.180.0",
     "esbuild": "^0.25.0",
+    "playwright": "^1.49.0",
     "polyfork": "^0.1.1",
     "typescript": "^5.7.0",
     "vite": "^7.0.0"

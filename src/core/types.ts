@@ -150,6 +150,12 @@ export interface World {
   randomShades: boolean;
   randomDrifters: boolean;
   windEnabled: boolean;
+  /**
+   * Benchmark scene (contract v1.3): no spawning, damage, pickups, fuel burn or
+   * end-of-night checks. Shades keep wandering; everything else is frozen so the
+   * measurement is the same on every machine.
+   */
+  bench: boolean;
   moteSeq: number;
   shadeSeq: number;
   drifterSeq: number;

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The contract file and the runtime tuning must never drift apart: the grader
  * builds scenarios from game.contract.json, so a mismatch silently breaks every
  * hidden test. This suite is the automated guard for that risk.
@@ -13,8 +13,8 @@ import { NIGHT_MAPS, PALETTE, TUNING, ambientForLit } from '../dist/core/index.j
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
 
-test('game.contract.json declares contract_version 1.2 and a team id', () => {
-  assert.equal(contract.contract_version, '1.2');
+test('game.contract.json declares contract_version 1.3 and a team id', () => {
+  assert.equal(contract.contract_version, '1.3');
   assert.match(contract.team, /^2A202603417-[a-z-]+$/);
 });
 

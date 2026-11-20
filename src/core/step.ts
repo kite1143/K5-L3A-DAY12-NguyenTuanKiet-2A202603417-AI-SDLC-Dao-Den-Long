@@ -119,39 +119,43 @@ export function stepWorld(w: World, input: ResolvedInput, out: SimEvent[]): void
   }
 
   // Lantern fuel: natural decay plus every shade that is draining a lantern.
-  let drainedByLantern: Map<string, number> | null = null;
-  for (const shade of w.shades) {
-    if (shade.state !== 'drain' || !shade.targetLanternId) continue;
-    if (!drainedByLantern) drainedByLantern = new Map();
-    drainedByLantern.set(
-      shade.targetLanternId,
-      (drainedByLantern.get(shade.targetLanternId) ?? 0) + DRAIN_UNITS_PER_TICK,
-    );
-  }
-  for (const lantern of w.lanterns) {
-    if (!lantern.lit) continue;
-    lantern.fuelUnits -= FUEL_DECAY_UNITS_PER_TICK + (drainedByLantern?.get(lantern.id) ?? 0);
-  }
-  if (drainedByLantern && simTick % DRAIN_EVENT_INTERVAL_TICKS === 0) {
+  // In the benchmark scene the fuel is frozen at 100 so every machine measures
+  // the same picture.
+  if (!w.bench) {
+    let drainedByLantern: Map<string, number> | null = null;
     for (const shade of w.shades) {
       if (shade.state !== 'drain' || !shade.targetLanternId) continue;
-      const lantern = w.lanterns.find((l) => l.id === shade.targetLanternId);
-      if (!lantern || !lantern.lit) continue;
-      out.push({
-        tick,
-        name: 'fuel_drain',
-        data: { lantern_id: lantern.id, shade_id: shade.id, fuel: fuelToDisplay(lantern.fuelUnits) },
-      });
+      if (!drainedByLantern) drainedByLantern = new Map();
+      drainedByLantern.set(
+        shade.targetLanternId,
+        (drainedByLantern.get(shade.targetLanternId) ?? 0) + DRAIN_UNITS_PER_TICK,
+      );
     }
-  }
-  // A lantern with no fuel left goes out right after the fuel step.
-  for (const lantern of w.lanterns) {
-    if (!lantern.lit || lantern.fuelUnits > 0) continue;
-    lantern.lit = false;
-    lantern.fuelUnits = 0;
-    lantern.deposited = 0;
-    lantern.everLit = true;
-    out.push({ tick, name: 'lantern_out', data: { lantern_id: lantern.id } });
+    for (const lantern of w.lanterns) {
+      if (!lantern.lit) continue;
+      lantern.fuelUnits -= FUEL_DECAY_UNITS_PER_TICK + (drainedByLantern?.get(lantern.id) ?? 0);
+    }
+    if (drainedByLantern && simTick % DRAIN_EVENT_INTERVAL_TICKS === 0) {
+      for (const shade of w.shades) {
+        if (shade.state !== 'drain' || !shade.targetLanternId) continue;
+        const lantern = w.lanterns.find((l) => l.id === shade.targetLanternId);
+        if (!lantern || !lantern.lit) continue;
+        out.push({
+          tick,
+          name: 'fuel_drain',
+          data: { lantern_id: lantern.id, shade_id: shade.id, fuel: fuelToDisplay(lantern.fuelUnits) },
+        });
+      }
+    }
+    // A lantern with no fuel left goes out right after the fuel step.
+    for (const lantern of w.lanterns) {
+      if (!lantern.lit || lantern.fuelUnits > 0) continue;
+      lantern.lit = false;
+      lantern.fuelUnits = 0;
+      lantern.deposited = 0;
+      lantern.everLit = true;
+      out.push({ tick, name: 'lantern_out', data: { lantern_id: lantern.id } });
+    }
   }
 
   updateWind(w, simTick);
@@ -159,8 +163,8 @@ export function stepWorld(w: World, input: ResolvedInput, out: SimEvent[]): void
   // 3. Move the player, then check the fall.
   movePlayer(w, input, out, tick, simTick);
 
-  // 4. Pick up motes and charms.
-  pickups(w, out, tick, simTick);
+  // 4. Pick up motes and charms (never in the benchmark scene).
+  if (!w.bench) pickups(w, out, tick, simTick);
 
   // 5. Lanterns.
   if (input.pressed.interact) interact(w, out, tick);
@@ -176,18 +180,21 @@ export function stepWorld(w: World, input: ResolvedInput, out: SimEvent[]): void
   moveDrifters(w);
 
   // 9. Contacts: a drifter steals first, then at most one shade hit.
-  contacts(w, out, tick);
+  if (!w.bench) contacts(w, out, tick);
 
   // 10. Spawns (new entities can only be touched from the next tick).
-  spawns(w, out, tick, simTick);
+  if (!w.bench) spawns(w, out, tick, simTick);
 
   // 11. End of night: no early win any more — survive to dawn with enough lanterns lit.
-  if (p.flames <= 0) {
-    finish(w, 'lost', 'no_flames', out, tick);
-  } else if (w.timeLeftTicks <= 0) {
-    const lit = w.lanterns.filter((l) => l.lit).length;
-    if (lit >= dawnThreshold(w.lanterns.length)) finish(w, 'won', 'dawn_survived', out, tick);
-    else finish(w, 'lost', 'dawn', out, tick);
+  //     The benchmark scene never ends.
+  if (!w.bench) {
+    if (p.flames <= 0) {
+      finish(w, 'lost', 'no_flames', out, tick);
+    } else if (w.timeLeftTicks <= 0) {
+      const lit = w.lanterns.filter((l) => l.lit).length;
+      if (lit >= dawnThreshold(w.lanterns.length)) finish(w, 'won', 'dawn_survived', out, tick);
+      else finish(w, 'lost', 'dawn', out, tick);
+    }
   }
 
   w.tick = tick;
@@ -196,7 +203,7 @@ export function stepWorld(w: World, input: ResolvedInput, out: SimEvent[]): void
 
 function updateWind(w: World, simTick: number): void {
   const schedule = w.map.wind;
-  if (!w.windEnabled || !schedule) {
+  if (!w.windEnabled || !schedule || w.bench) {
     w.wind.active = false;
     w.wind.warnActive = false;
     return;
@@ -684,7 +691,7 @@ function moveShades(w: World): void {
       case 'wander':
       case 'chase': {
         const distance = distanceXZ(shade.x, shade.z, p.x, p.z);
-        if (distance <= SHADE_DETECT_RADIUS) shade.state = 'chase';
+        if (distance <= SHADE_DETECT_RADIUS && !w.bench) shade.state = 'chase';
         else if (shade.state === 'chase' && distance > SHADE_LEAVE_RADIUS) shade.state = 'wander';
 
         if (shade.state === 'chase') {

@@ -1,9 +1,11 @@
 {
-  "contract_version": "1.2",
+  "contract_version": "1.3",
   "team": "2A202603417-nguyen-tuan-kiet",
-  "build_cmd": "npm install && npm run build",
+  "build_cmd": "npm install && npx playwright install chromium && npm run build",
   "run_cmd": "npm run start",
   "headless_cmd": "node dist/headless/main.js",
+  "bench_cmd": "node scripts/bench.mjs",
+  "soak_cmd": "node --expose-gc --max-old-space-size=160 --max-semi-space-size=2 scripts/soak.mjs",
   "tuning": {
     "player_speed": 6.0,
     "carry_capacity": 10,

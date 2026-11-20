@@ -175,6 +175,7 @@ export function createWorld(seed: number, night: NightId = 1, scenario: Scenario
     randomShades: scenario?.random_shades !== false,
     randomDrifters: scenario?.random_drifters !== false,
     windEnabled: scenario?.wind_enabled !== false,
+    bench: scenario?.bench === true,
     moteSeq: 1,
     shadeSeq: 1,
     drifterSeq: 1,

@@ -103,6 +103,28 @@ node dist/headless/main.js --seed 202603417 --night 1 --ticks 600 --out out.json
 - Event mới: `refuel {lantern_id, amount, fuel}`, `lantern_out {lantern_id}`, `fuel_drain {lantern_id, shade_id, fuel}` (mỗi 60 tick khi đang hút); `lantern_lit` có thêm `relight`; `game_over.reason` có `dawn_survived`.
 - Cùng seed + cùng scenario + cùng inputs → output **giống hệt nhau**; một đêm đầy đủ 18.000 tick chạy dưới 1 giây (yêu cầu ≤ 30 s).
 
+## Benchmark và soak test (contract v1.3)
+
+```bash
+# cảnh chuẩn: 200 Bóng Mực wander, 100 đom đóm, L1–L3 sáng, camera bay vòng 30 m
+node scripts/bench.mjs --seed 42 --duration 30 --out bench.json
+
+# 10 đêm liên tiếp trong một tiến trình, input ngẫu nhiên theo seed
+node scripts/soak.mjs --seed 7 --nights 10 --out soak.json
+```
+
+Với `bench_cmd`/`soak_cmd` trong `game.contract.json` (`npm run bench`, `npm run soak`). Số đo trên máy này: [docs/proof/phase-4/](docs/proof/phase-4/summary.md). `peak_mem_mb` là `null` vì trang web không đọc được RSS tiến trình; `vsync_off` bật được nhờ cờ Chromium `--disable-gpu-vsync --disable-frame-rate-limits`.
+
+## Trạng thái Phase 4 (ghi trung thực)
+
+| Yêu cầu | Trạng thái |
+|---|---|
+| Benchmark + `bench.json` | Xong (`avg_fps` 69,7 · `p1_low_fps` 26,9 · `load_ms` 234) |
+| Soak test + `soak.json` | Xong (0 crash, 54 → 63 MB) |
+| Bảng xếp hạng cục bộ + `--export-leaderboard` | **Chưa làm** |
+| Trợ năng (đổi phím, chỉ báo, giảm chuyển động, cỡ chữ) | **Chưa làm** (mới có chế độ mù màu) |
+| Video demo `.mp4` + Release `v1.0.0` | **Chưa làm** |
+
 ## Kiểm thử
 
 ```bash

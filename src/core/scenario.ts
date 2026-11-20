@@ -60,6 +60,8 @@ export interface ScenarioInput {
   random_shades?: boolean;
   random_drifters?: boolean;
   wind_enabled?: boolean;
+  /** v1.3: benchmark scene — no spawning, damage, pickups, fuel burn or ending. */
+  bench?: boolean;
   motes?: Array<[number, number, number]>;
   shades?: ScenarioShade[];
   drifters?: ScenarioDrifter[];
@@ -130,6 +132,7 @@ export function parseScenario(raw: unknown): ScenarioInput {
   if (raw.random_shades !== undefined) out.random_shades = bool(raw.random_shades, 'random_shades');
   if (raw.random_drifters !== undefined) out.random_drifters = bool(raw.random_drifters, 'random_drifters');
   if (raw.wind_enabled !== undefined) out.wind_enabled = bool(raw.wind_enabled, 'wind_enabled');
+  if (raw.bench !== undefined) out.bench = bool(raw.bench, 'bench');
 
   if (raw.motes !== undefined) {
     if (!Array.isArray(raw.motes)) throw new ContractFormatError('motes must be an array');

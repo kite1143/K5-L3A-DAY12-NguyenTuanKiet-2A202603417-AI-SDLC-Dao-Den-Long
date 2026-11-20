@@ -1,5 +1,18 @@
 # Changelog
 
+## Phase 4 — Ticket-04 "Bình minh: phát hành v1.0.0", contract v1.3
+
+### Thêm
+- **Chế độ benchmark** theo contract v1.3: `node scripts/bench.mjs --seed 42 --duration 30 --out bench.json`. Cảnh chuẩn (`src/render/bench.ts`): 1280×720, vsync tắt bằng cờ Chromium, 200 Bóng Mực `wander` rải đều, 100 đom đóm, L1–L3 sáng `fuel: 100`, tắt sinh/sát thương/nhặt/hao dầu/kết thúc đêm, camera bay vòng 30 m ở Y=15 m, 15 s/vòng. `bench.json` có `avg_fps`, `p1_low_fps`, `frame_ms_p95`, `frames`, `load_ms`, `peak_mem_mb`, `vsync_off`, `renderer`, `os`.
+- **Soak test**: `node scripts/soak.mjs --seed 7 --nights 10 --out soak.json` — 10 đêm liên tiếp trong một tiến trình, input ngẫu nhiên theo seed, báo `crashes`, `mem_start_mb`, `mem_end_mb`, `duration_s`.
+- **Contract v1.3**: `contract_version: "1.3"`, thêm `bench_cmd` và `soak_cmd`; `build_cmd` cài Chromium cho Playwright (bench cần trình duyệt).
+- Cờ `bench` trong scenario/simulation để đóng băng spawn, sát thương, nhặt, hao dầu và điều kiện kết thúc — đầu ra headless của gameplay **không đổi** khi cờ này vắng mặt.
+
+### Chưa làm trong phase này (ghi trung thực)
+- **Bảng xếp hạng cục bộ** (top 10, nhập tên, màn hình menu, `--export-leaderboard`): chưa có.
+- **Trợ năng**: đổi phím, chỉ báo/phụ đề, giảm chuyển động, cỡ chữ ≥ 18 px + chữ lớn: chưa có (mới có chế độ mù màu ở Phase 3).
+- **Video demo `.mp4`** và **GitHub Release v1.0.0**: chưa tạo.
+
 ## Phase 3 — Ticket-03 "Đèn cạn dầu", contract v1.2
 
 > Change request phá vỡ tương thích. Quyết định thiết kế: [ADR-001](docs/notes/adr-001-lantern-fuel.md).
