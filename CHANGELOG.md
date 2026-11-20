@@ -2,6 +2,10 @@
 
 ## Chưa phát hành (sau `phase-1`)
 
+### Sửa
+- **Bóng Mực sinh ra trong lúc chơi không được vẽ.** `GameView.rebuild()` chỉ tạo mesh cho những shade tồn tại lúc dựng cảnh, mà lúc đó danh sách rỗng; shade spawn ở giây thứ 6 vẫn đuổi và gây sát thương trong mô phỏng nhưng **vô hình** trên màn hình. `sync()` giờ tạo mesh lazily theo `id`. Thêm kiểm tra tự động: hook `__dao.renderedShades()` so số mesh thật với số shade trong mô phỏng, bot trong `scripts/shots.mjs` báo `MISSING MESH` nếu lệch (đã chạy: `sim=1 rendered=1`).
+- Bóng Mực đậm hơn cho ra dáng "mực đen trong sương" (lõi gần đen, quầng tím), thêm nhịp "thở" nhẹ để nhìn ra là sinh vật sống.
+
 ### Thêm
 - **Prop cảnh vật low-poly** từ Polyfork (CC BY 4.0): thông, đá, túp lều của người giữ bến, thuyền mộc, đèn lồng lớn, nấm phát sáng. Tất cả nằm trong `public/models/` và được credit đầy đủ ở `CREDITS.md`.
 - `src/render/assets.ts`: tải GLB bằng `GLTFLoader`, chuẩn hoá kích thước theo chiều cao mong muốn và đặt đáy về mặt đất; **tải lỗi thì trả `null`** và cảnh quay về mesh thủ tục, nên repo vẫn chạy khi offline hay thiếu file.

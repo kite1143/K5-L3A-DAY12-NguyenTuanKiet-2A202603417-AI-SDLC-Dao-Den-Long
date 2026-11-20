@@ -102,6 +102,8 @@ if (!controlsOk) {
 let firstMoteShot = false;
 let firstLanternShot = false;
 let allLanternShot = false;
+let shadeShot = false;
+let shadeCountChecked = false;
 let pressed = 0;
 
 await page.keyboard.down('KeyW');
@@ -132,6 +134,23 @@ for (let step = 0; step < 1600; step += 1) {
   }
 
   const shade = state.shades.find((s) => s.state !== 'stunned' && distance(s, state.player) < 4.2);
+
+  // A shade is spawned by the simulation at ~6 s: it must also exist as a mesh.
+  if (!shadeCountChecked && state.shades.length > 0) {
+    shadeCountChecked = true;
+    const rendered = await page.evaluate(() => window.__dao.renderedShades());
+    const ok = rendered === state.shades.length;
+    log(`shades: sim=${state.shades.length} rendered=${rendered} -> ${ok ? 'OK' : 'MISSING MESH'}`);
+    if (!ok) process.exitCode = 1;
+  }
+
+  if (!shadeShot && state.shades.some((s) => distance(s, state.player) < 9)) {
+    shadeShot = true;
+    await page.screenshot({ path: join(outDir, '08-shade.png') });
+    const nearest = state.shades.reduce((best, s) => (distance(s, state.player) < distance(best, state.player) ? s : best));
+    log(`shade screenshot — ${nearest.id} chasing at ${distance(nearest, state.player).toFixed(2)} m`);
+  }
+
   if (shade) {
     await page.keyboard.press('KeyF');
     pressed += 1;

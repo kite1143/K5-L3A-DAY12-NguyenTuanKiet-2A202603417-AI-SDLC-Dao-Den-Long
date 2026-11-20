@@ -48,6 +48,7 @@ PRD-0 bắt buộc Mây **"đội nón lá có treo một chiếc đèn lồng n
 | `screens/05-first-lantern-lit.png` | Đèn lồng (model Spirit Lantern) đã cháy, vòng an toàn 3 m |
 | `screens/06-end.png` | Màn thắng 5/5 đèn, điểm 1362 |
 | `screens/07-replay.png` | Bấm `R`: đêm mới sạch |
+| `screens/08-shade.png` | Bóng Mực đuổi ở 8,87 m — bằng chứng mesh được tạo cho shade sinh ra **trong lúc chơi** (trước đó vô hình) |
 
 `playthrough.json` ghi lại nhật ký lượt chơi, `console.log` rỗng lỗi (không có `pageerror`, tức 8 model đều nạp thành công).
 

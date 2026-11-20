@@ -88,6 +88,10 @@ function installDebugHook(): void {
     setYaw: (deg: number) => {
       controls.yaw = deg;
     },
+    // How many shade meshes actually exist in the scene: the screenshot bot
+    // compares this with the simulation so a spawn that never gets drawn fails
+    // loudly instead of silently.
+    renderedShades: () => view.shadeCount,
   };
 }
 

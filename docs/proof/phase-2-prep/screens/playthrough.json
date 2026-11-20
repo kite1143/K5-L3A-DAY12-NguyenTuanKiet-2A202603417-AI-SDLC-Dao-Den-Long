@@ -2,22 +2,24 @@
   "seed": "202603417",
   "transcript": [
     "intro screenshot — seed 202603417",
-    "island ready: 30 motes, 5 lanterns, 299.4s of night",
-    "controls: D@yaw0 dx=-1.00 dz=0.00 | A@yaw0 dx=1.00 | D@yaw90 dz=1.00 | A@yaw90 dz=-0.50 -> OK",
+    "island ready: 30 motes, 5 lanterns, 299.46666666666664s of night",
+    "controls: D@yaw0 dx=-0.50 dz=0.00 | A@yaw0 dx=0.50 | D@yaw90 dz=0.50 | A@yaw90 dz=-0.50 -> OK",
     "first mote picked up at 1.9s",
-    "lantern lit #1 at 7.9s",
-    "pulse screenshot — shade S1 at 4.01 m",
-    "final: won / score 1362 / lanterns lit 5/5 / flames 3",
+    "shades: sim=1 rendered=1 -> OK",
+    "lantern lit #1 at 8.0s",
+    "shade screenshot — S1 chasing at 8.87 m",
+    "pulse screenshot — shade S2 at 3.84 m",
+    "final: won / score 1346 / lanterns lit 5/5 / flames 3",
     "replay after won: state=playing score=0 flames=3",
     "replay check: new night starts clean",
     "HUD: flames=●●● carry=0 / 3 score=0 time=05:00 lanterns=○○○○○",
     "canvas 1152x648"
   ],
   "consoleLog": [
-    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[warning] [.WebGL-0x3ff400608800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    "[warning] [.WebGL-0x4e4c012c4600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x4e4c012c4600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x4e4c012c4600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x4e4c012c4600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
   ],
   "hud": {
     "flames": "●●●",

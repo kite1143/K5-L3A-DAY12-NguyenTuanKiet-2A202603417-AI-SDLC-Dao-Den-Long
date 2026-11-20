@@ -52,6 +52,7 @@ node scripts/shots.mjs http://localhost:5173/ docs/proof/phase-N/screens <seed>
 | `npm install <pkg>` sẽ **prune** các package cài bằng `--no-save` (playwright biến mất giữa phiên) | Cài lại `npm i --no-save playwright` sau mỗi lần thêm dependency, hoặc thêm dependency trước rồi mới chụp ảnh |
 | Model ngoài có đơn vị và gốc toạ độ khác nhau (mét, cm, gốc ở đáy hay giữa) | `placeProp()` scale theo chiều cao mong muốn rồi dời đáy về y = 0; không đặt thủ công bằng mắt |
 | Thêm asset làm headless chậm/lệch | Asset chỉ được import từ `src/render/**`; test đối chiếu `dist/headless/main.js` với `src/` sẽ bắt nếu ai đó import nhầm |
+| Entity sinh ra **trong lúc chơi** (Bóng Mực) không hiện: `rebuild()` chỉ tạo mesh cho danh sách lúc dựng cảnh | `sync()` phải tạo view lazily theo id; giữ hook `__dao.renderedShades()` và để `scripts/shots.mjs` so với số shade trong mô phỏng |
 
 ## Quy ước commit
 

@@ -7,7 +7,8 @@ import type { Stage } from './scene';
 import { glowSprite } from './textures';
 
 const WARM = 0xffb85e;
-const INK = 0x1a0b26;
+/** Ink-shadow body colour: almost black, so it reads as a hole in the mist. */
+const INK = 0x0a0410;
 
 function disposeTree(root: THREE.Object3D): void {
   root.traverse((node) => {
@@ -267,19 +268,19 @@ export class GameView {
       new THREE.IcosahedronGeometry(0.72, 1),
       new THREE.MeshStandardMaterial({
         color: INK,
-        emissive: 0x3a1052,
-        emissiveIntensity: 0.9,
-        roughness: 0.3,
-        metalness: 0.1,
+        emissive: 0x3d1054,
+        emissiveIntensity: 1.1,
+        roughness: 0.28,
+        metalness: 0.15,
         flatShading: true,
         transparent: true,
-        opacity: 0.94,
+        opacity: 0.97,
       }),
     );
     const shell = new THREE.Mesh(
-      new THREE.IcosahedronGeometry(1.05, 1),
+      new THREE.IcosahedronGeometry(1.02, 1),
       new THREE.MeshBasicMaterial({
-        color: 0x5b1f7a,
+        color: 0x6f2194,
         transparent: true,
         opacity: 0.16,
         blending: THREE.AdditiveBlending,
@@ -287,10 +288,15 @@ export class GameView {
         wireframe: true,
       }),
     );
-    const halo = glowSprite(0x4a1670, 3.6, 0.4);
+    const halo = glowSprite(0x4a1268, 4.8, 0.5);
     group.add(core, shell, halo);
     this.root.add(group);
     return group;
+  }
+
+  /** Number of shade meshes currently in the scene (used by the test hook). */
+  get shadeCount(): number {
+    return this.shades.size;
   }
 
   /** Push the current simulation state into the scene graph. */
@@ -343,11 +349,18 @@ export class GameView {
 
     // Shades.
     for (const shade of world.shades) {
-      const view = this.shades.get(shade.id);
-      if (!view) continue;
+      // Shades are spawned during play, after the world was built: create their
+      // mesh lazily instead of skipping ids we have not seen yet.
+      let view = this.shades.get(shade.id);
+      if (!view) {
+        view = this.buildShade();
+        this.shades.set(shade.id, view);
+      }
       view.position.set(shade.x, shade.y, shade.z);
       const stunned = shade.state === 'stunned';
-      view.scale.setScalar(stunned ? 0.82 : 1);
+      // A living blob breathes; a stunned one shrinks.
+      const breathe = stunned ? 0.82 : 1 + Math.sin(elapsed * 2.6 + shade.x) * 0.045;
+      view.scale.setScalar(breathe);
       view.rotation.y = stunned ? elapsed * 3 : elapsed * 0.6;
       view.rotation.x = Math.sin(elapsed * 1.3 + shade.x) * 0.12;
     }
