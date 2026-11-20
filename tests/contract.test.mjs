@@ -13,8 +13,8 @@ import { NIGHT_MAPS, PALETTE, TUNING, ambientForLit } from '../dist/core/index.j
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
 
-test('game.contract.json declares contract_version 1.1 and a team id', () => {
-  assert.equal(contract.contract_version, '1.1');
+test('game.contract.json declares contract_version 1.2 and a team id', () => {
+  assert.equal(contract.contract_version, '1.2');
   assert.match(contract.team, /^2A202603417-[a-z-]+$/);
 });
 
@@ -58,19 +58,31 @@ test('tuning covers every key the contract requires', () => {
     'dash_speed',
     'dash_duration_s',
     'dash_cooldown_s',
+    'fuel_max',
+    'fuel_decay_per_s',
+    'fuel_per_mote',
+    'relight_cost',
+    'win_ratio',
+    'drain_per_s',
+    'low_fuel_threshold',
+    'capacity_max',
     'score',
   ];
   assert.deepEqual(Object.keys(contract.tuning).sort(), [...required].sort());
   assert.deepEqual(Object.keys(contract.tuning.score).sort(), [
-    'per_flame_left',
-    'per_lantern',
     'per_mote',
-    'per_second_left',
+    'per_lantern',
+    'per_relight',
     'per_stun',
-  ]);
+    'per_stun_drain',
+    'dawn_per_lantern',
+    'dawn_per_flame',
+    'per_second_left',
+    'per_flame_left',
+  ].sort());
 });
 
-test('tuning carries the canonical numbers from Ticket-02', () => {
+test('tuning carries the canonical numbers from Ticket-03', () => {
   const expected = {
     player_speed: 6.0,
     carry_capacity: 10,
@@ -80,9 +92,9 @@ test('tuning carries the canonical numbers from Ticket-02', () => {
     interact_radius: 2.0,
     pulse_cost: 3,
     pulse_radius: 5.0,
-    night1_duration_s: 300,
-    night2_duration_s: 330,
-    night3_duration_s: 360,
+    night1_duration_s: 240,
+    night2_duration_s: 270,
+    night3_duration_s: 300,
     flames: 3,
     invuln_s: 1.5,
     pulse_stun_s: 2.0,
@@ -95,16 +107,28 @@ test('tuning carries the canonical numbers from Ticket-02', () => {
     dash_duration_s: 0.2,
     dash_cooldown_s: 1.5,
     fall_enabled: true,
+    fuel_max: 100,
+    fuel_decay_per_s: 1.0,
+    fuel_per_mote: 10,
+    relight_cost: 5,
+    win_ratio: 0.6,
+    drain_per_s: 5,
+    low_fuel_threshold: 30,
+    capacity_max: 20,
   };
   for (const [key, value] of Object.entries(expected)) {
     assert.equal(contract.tuning[key], value, `tuning.${key}`);
   }
   assert.deepEqual(contract.tuning.score, {
-    per_mote: 10,
+    per_mote: 5,
     per_lantern: 100,
+    per_relight: 40,
     per_stun: 5,
-    per_second_left: 2,
-    per_flame_left: 50,
+    per_stun_drain: 15,
+    dawn_per_lantern: 50,
+    dawn_per_flame: 50,
+    per_second_left: 0,
+    per_flame_left: 0,
   });
 });
 
@@ -116,9 +140,9 @@ test('mounting the night maps: lantern ids and durations match the ticket', () =
   assert.deepEqual(NIGHT_MAPS[1].lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5']);
   assert.deepEqual(NIGHT_MAPS[2].lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5', 'L6']);
   assert.deepEqual(NIGHT_MAPS[3].lanterns.map((l) => l.id), ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7']);
-  assert.equal(NIGHT_MAPS[1].durationTicks, 300 * 60);
-  assert.equal(NIGHT_MAPS[2].durationTicks, 330 * 60);
-  assert.equal(NIGHT_MAPS[3].durationTicks, 360 * 60);
+  assert.equal(NIGHT_MAPS[1].durationTicks, 240 * 60);
+  assert.equal(NIGHT_MAPS[2].durationTicks, 270 * 60);
+  assert.equal(NIGHT_MAPS[3].durationTicks, 300 * 60);
 });
 
 test('Night 1 lantern positions are the canonical ones', () => {
@@ -147,6 +171,8 @@ test('the standard palette is present and the ambient formula matches the ticket
   assert.equal(PALETTE.lanternLit, '#FFB347');
   assert.equal(PALETTE.shadeRim, '#7A3CFF');
   assert.equal(PALETTE.scarf, '#C8102E');
+  assert.equal(PALETTE.shadeRimCb, '#00B3FF', 'colour-blind shade rim');
+  assert.equal(PALETTE.dangerCb, '#FFFFFF', 'colour-blind warning colour');
   closeTo(ambientForLit(0, 5), 0.15);
   closeTo(ambientForLit(5, 5), 0.7);
   closeTo(ambientForLit(2, 4), 0.15 + 0.55 * 0.5);

@@ -59,9 +59,9 @@ test('a plain run exits 0 and writes a well-formed v1.1 JSONL file', () => {
 test('all three nights run and report their duration', () => {
   const dir = tmpDir();
   for (const [night, seconds] of [
-    [1, 300],
-    [2, 330],
-    [3, 360],
+    [1, 240],
+    [2, 270],
+    [3, 300],
   ]) {
     const out = join(dir, `night-${night}.jsonl`);
     const res = runCli(['--seed', '7', '--night', String(night), '--ticks', '5', '--out', out]);
@@ -253,7 +253,7 @@ test('every line is valid JSON and the file ends with a newline', () => {
   for (const line of text.trimEnd().split('\n')) assert.doesNotThrow(() => JSON.parse(line));
 });
 
-test('a full 21600-tick night through the CLI finishes well under 30 s', () => {
+test('a full 18000-tick night through the CLI finishes well under 30 s', () => {
   const dir = tmpDir();
   const out = join(dir, 'full.jsonl');
   const scenario = writeJson(dir, 'quiet.json', {
@@ -270,7 +270,7 @@ test('a full 21600-tick night through the CLI finishes well under 30 s', () => {
   const res = runCli([
     '--seed', '3',
     '--night', '3',
-    '--ticks', '21600',
+    '--ticks', '18000',
     '--out', out,
     '--snapshot-every', '600',
     '--scenario', scenario,
@@ -278,7 +278,7 @@ test('a full 21600-tick night through the CLI finishes well under 30 s', () => {
   const seconds = (Date.now() - started) / 1000;
   assert.equal(res.status, 0, res.stderr);
   assert.ok(seconds < 30, `took ${seconds.toFixed(2)} s`);
-  assert.equal(readLines(out).at(-1).ticks, 21600);
+  assert.equal(readLines(out).at(-1).ticks, 18000);
 });
 
 function closeTo(actual, expected, tolerance) {

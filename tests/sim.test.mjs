@@ -69,7 +69,8 @@ test('jump uses 7 m/s against 20 m/s^2 gravity and only fires on the ground', ()
 
 test('time_left_s counts one sixtieth per step', () => {
   const r = run({ ticks: 120, scenario: quiet(), snapshotEvery: 60 });
-  assert.deepEqual(r.snapshots.map((s) => s.time_left_s), [300, 299, 298]);
+  const total = tuning.night1_duration_s;
+  assert.deepEqual(r.snapshots.map((s) => s.time_left_s), [total, total - 1, total - 2]);
 });
 
 test('motes are picked up inside pickup_radius only, and the height gap matters', () => {
@@ -340,20 +341,24 @@ test('falling with the last flame is a loss, with no respawn', () => {
   assert.deepEqual(firstEvent(r, 'game_over').data, { result: 'lost', reason: 'no_flames' });
 });
 
-test('lighting every lantern wins, even on the tick time runs out', () => {
-  const preLit = ['L2', 'L3', 'L4', 'L5'].map((id) => ({ id, lit: true }));
-  const r = run({
-    ticks: 600,
-    scenario: quiet({ time_left_s: 1 / 60, player: { pos: [0, 0, 24], carried: 10 }, lanterns: preLit }),
-    frames: [{ tick: 0, interact: true }, { tick: 1, interact: false }],
-  });
-  assert.equal(r.end.state, 'won');
-  assert.equal(r.end.ticks, 1);
-  assert.deepEqual(firstEvent(r, 'game_over').data, { result: 'won', reason: 'all_lit' });
-  assert.equal(
-    r.end.score,
-    tuning.score.per_lantern + 10 * tuning.score.per_mote + tuning.flames * tuning.score.per_flame_left,
-  );
+test('surviving to dawn with enough lanterns wins, and a full house does not end the night early', () => {
+  // v1.2 replaced the old "light them all and win instantly" rule (see ADR-001).
+  const allLit = ['L1', 'L2', 'L3', 'L4', 'L5'].map((id) => ({ id, lit: true }));
+  const early = run({ ticks: 200, scenario: quiet({ lanterns: allLit }) });
+  assert.equal(early.end.state, 'playing', 'lit lanterns alone no longer win the night');
+  assert.equal(named(early, 'game_over').length, 0);
+
+  // 3/5 lit is exactly the threshold (ceil(0.6 * 5)).
+  const three = ['L1', 'L2', 'L3'].map((id) => ({ id, lit: true }));
+  const dawn = run({ ticks: 600, scenario: quiet({ lanterns: three, time_left_s: 0.05 }) });
+  assert.equal(dawn.end.state, 'won');
+  assert.deepEqual(firstEvent(dawn, 'game_over').data, { result: 'won', reason: 'dawn_survived' });
+
+  // 2/5 is below it.
+  const two = ['L1', 'L2'].map((id) => ({ id, lit: true }));
+  const fail = run({ ticks: 600, scenario: quiet({ lanterns: two, time_left_s: 0.05 }) });
+  assert.equal(fail.end.state, 'lost');
+  assert.deepEqual(firstEvent(fail, 'game_over').data, { result: 'lost', reason: 'dawn' });
 });
 
 test('running out of time loses with dawn unless every lantern is lit', () => {
@@ -409,8 +414,8 @@ test('a different seed produces a different island', () => {
   assert.notDeepEqual(a.snapshots[0].motes, b.snapshots[0].motes);
 });
 
-test('shade states only ever use the five contract names', () => {
-  const allowed = new Set(['spawning', 'wander', 'chase', 'recoil', 'stunned']);
+test('shade states only ever use the six contract names', () => {
+  const allowed = new Set(['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain']);
   const r = run({ seed: 9, night: 1, ticks: 1800, snapshotEvery: 30 });
   for (const snap of r.snapshots) {
     for (const shade of snap.shades) assert.ok(allowed.has(shade.state), `bad state ${shade.state}`);
@@ -422,11 +427,11 @@ test('a full night of headless simulation finishes in under 30 seconds', () => {
   const r = run({
     seed: 3,
     night: 3,
-    ticks: 21600,
+    ticks: 300 * 60,
     snapshotEvery: 600,
     scenario: { ...quiet(), wind_enabled: false },
   });
   const seconds = (Date.now() - started) / 1000;
-  assert.equal(r.end.ticks, 21600, 'the quiet scenario survives the whole night');
+  assert.equal(r.end.ticks, 300 * 60, 'the quiet scenario survives the whole night');
   assert.ok(seconds < 30, `took ${seconds.toFixed(2)} s`);
 });

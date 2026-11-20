@@ -118,5 +118,65 @@
     "scenario": "invalid.scenario.json",
     "inputs": null,
     "expectExit": 2
+  },
+  {
+    "name": "13-lantern-fuel-burn",
+    "note": "a lit lantern burns exactly 1 fuel per second",
+    "night": 1,
+    "seed": 3,
+    "ticks": 240,
+    "snapshotEvery": 60,
+    "scenario": "13-lantern-fuel-burn.scenario.json",
+    "inputs": null
+  },
+  {
+    "name": "14-refuel",
+    "note": "châm dầu: ceil(missing / 10) motes for 10 fuel each, capped at 100",
+    "night": 1,
+    "seed": 3,
+    "ticks": 30,
+    "snapshotEvery": 10,
+    "scenario": "14-refuel.scenario.json",
+    "inputs": "14-refuel.inputs.json"
+  },
+  {
+    "name": "15-lantern-out",
+    "note": "a lantern that runs dry goes out and can be relit for 5 motes",
+    "night": 1,
+    "seed": 3,
+    "ticks": 60,
+    "snapshotEvery": 10,
+    "scenario": "15-lantern-out.scenario.json",
+    "inputs": "15-lantern-out.inputs.json"
+  },
+  {
+    "name": "16-shade-drain",
+    "note": "a wandering shade walks to the weak lantern and drains 5 fuel per second",
+    "night": 1,
+    "seed": 4,
+    "ticks": 720,
+    "snapshotEvery": 120,
+    "scenario": "16-shade-drain.scenario.json",
+    "inputs": "16-shade-drain.inputs.json"
+  },
+  {
+    "name": "17-dawn-survived",
+    "note": "surviving to dawn with 3/5 lanterns lit wins with reason dawn_survived",
+    "night": 1,
+    "seed": 5,
+    "ticks": 60,
+    "snapshotEvery": 10,
+    "scenario": "17-dawn-survived.scenario.json",
+    "inputs": "17-dawn-survived.inputs.json"
+  },
+  {
+    "name": "18-capacity",
+    "note": "carry capacity follows successful_lights (10 + 2 each, capped at 20)",
+    "night": 1,
+    "seed": 6,
+    "ticks": 30,
+    "snapshotEvery": 10,
+    "scenario": "18-capacity.scenario.json",
+    "inputs": "18-capacity.inputs.json"
   }
 ]

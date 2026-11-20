@@ -148,9 +148,9 @@ test('the Night 3 pad throws the player up onto tier 2', () => {
 
 test('every night reports its own night number and duration', () => {
   for (const [night, seconds] of [
-    [1, 300],
-    [2, 330],
-    [3, 360],
+    [1, 240],
+    [2, 270],
+    [3, 300],
   ]) {
     const r = run({ ticks: 0, night });
     assert.equal(r.snapshots[0].night, night);
