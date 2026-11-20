@@ -68,6 +68,7 @@ export class GameView {
   private lastZ = 0;
   private walkPhase = 0;
   private shadeRimColor = C.shadeRim;
+  private readonly shadeState = new Map<string, string>();
   private reduceMotion = false;
 
   /** Accessibility: stop pulsing, bobbing and blinking. */
@@ -413,16 +414,18 @@ export class GameView {
       view.scale.setScalar(breathe * spawn);
       view.rotation.y = state === 'stunned' ? elapsed * 3 : elapsed * 0.6;
       view.rotation.x = Math.sin(elapsed * 1.3 + shade.x) * 0.12;
-      const shell = view.children[1] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshBasicMaterial>;
-      shell.material.color.setHex(
-        state === 'stunned' || state === 'drain' ? C.shadeStunned : this.shadeRimColor,
-      );
-      shell.material.opacity = state === 'stunned' ? 0.08 : state === 'drain' ? 0.3 : 0.16;
-      const core = view.children[0] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshStandardMaterial>;
-      core.material.emissive.setHex(
-        state === 'stunned' || state === 'drain' ? C.shadeStunned : this.shadeRimColor,
-      );
-      core.material.emissiveIntensity = state === 'drain' ? 0.9 + Math.sin(elapsed * 6) * 0.3 : 0.55;
+      // Material writes only when the state actually changes: with 200 shades in
+      // the benchmark scene this is the difference between 60 fps and stutter.
+      if (this.shadeState.get(shade.id) !== state) {
+        this.shadeState.set(shade.id, state);
+        const shell = view.children[1] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshBasicMaterial>;
+        const core = view.children[0] as THREE.Mesh<THREE.IcosahedronGeometry, THREE.MeshStandardMaterial>;
+        const tone = state === 'stunned' || state === 'drain' ? C.shadeStunned : this.shadeRimColor;
+        shell.material.color.setHex(tone);
+        shell.material.opacity = state === 'stunned' ? 0.08 : state === 'drain' ? 0.3 : 0.16;
+        core.material.emissive.setHex(tone);
+        core.material.emissiveIntensity = state === 'drain' ? 1.1 : 0.55;
+      }
     }
 
     for (const drifter of world.drifters) {

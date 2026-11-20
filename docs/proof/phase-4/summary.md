@@ -8,16 +8,16 @@ Tag: `phase-4`. Số đo do tôi tự chạy trên máy mình; giảng viên đo
 
 | Chỉ số | Kết quả | Ngưỡng |
 |---|---:|---|
-| `avg_fps` | **69,7** | ≥ 60 ✔ |
-| `p1_low_fps` | **26,9** | ≥ 30 ✘ |
-| `frame_ms_p95` | 32,1 ms | — |
-| `frames` | 2091 | — |
-| `load_ms` | 234 | ≤ 10000 ✔ |
+| `avg_fps` | **117,6** | ≥ 60 ✔ |
+| `p1_low_fps` | **42,7** | ≥ 30 ✔ |
+| `frame_ms_p95` | 13,9 ms | — |
+| `frames` | 3530 | — |
+| `load_ms` | 101 | ≤ 10000 ✔ |
 | `peak_mem_mb` | `null` | — |
 
 Cảnh chuẩn: 1280×720, vsync tắt (`--disable-gpu-vsync --disable-frame-rate-limit`), 200 Bóng Mực `wander` rải đều (seed 42), 100 đom đóm, L1–L3 sáng `fuel: 100`, tắt sinh/sát thương/nhặt/hao dầu/kết thúc, camera vòng 30 m ở Y=15 m, 15 s/vòng, 3 s khởi động không đo.
 
-**Trung thực:** `p1_low_fps` dưới ngưỡng trên máy tôi (giật khung của trình duyệt). Cùng cảnh với vsync bật: `avg 59,9 / p1_low 53`. `peak_mem_mb` null vì trang web không đọc được RSS tiến trình.
+Bản đo đầu tiên chỉ được `avg 69,7 / p1_low 26,9`. Nguyên nhân: `GameView.sync()` ghi lại material (màu, emissive, opacity) cho **cả 200 Bóng Mực mỗi khung**, dù trạng thái không đổi. Sau khi chỉ ghi khi trạng thái thật sự đổi (`Map` cache theo `id`), cùng cảnh cho **117,6 fps / p1_low 42,7** — vượt cả hai ngưỡng. `peak_mem_mb` vẫn là `null` vì trang web không đọc được RSS tiến trình.
 
 ## 2. Soak
 

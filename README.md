@@ -119,7 +119,7 @@ Với `bench_cmd`/`soak_cmd` trong `game.contract.json` (`npm run bench`, `npm r
 
 | Yêu cầu | Trạng thái |
 |---|---|
-| Benchmark + `bench.json` | Xong (`avg_fps` 69,7 · `p1_low_fps` 26,9 · `load_ms` 234) |
+| Benchmark + `bench.json` | Xong (`avg_fps` 117,6 · `p1_low_fps` 42,7 · `load_ms` 101) |
 | Soak test + `soak.json` | Xong (0 crash, 54 → 63 MB) |
 | Bảng xếp hạng cục bộ + `--export-leaderboard` | **Chưa làm** |
 | Trợ năng (đổi phím, chỉ báo, giảm chuyển động, cỡ chữ) | **Chưa làm** (mới có chế độ mù màu) |

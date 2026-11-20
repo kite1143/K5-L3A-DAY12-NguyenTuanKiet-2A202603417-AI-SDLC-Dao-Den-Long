@@ -54,7 +54,7 @@
 **Hỏng phase trước?** Không. `run_cmd` đổi từ `vite preview` sang `node scripts/play.mjs` (server tĩnh + API bảng xếp hạng) — vẫn là 3 lệnh trong README, và cần thiết để `--export-leaderboard` hoạt động.
 
 **Điều cần chỉnh:**
-1. `p1_low_fps` 26,9 < 30 trên máy tác giả — cần đo lại trên máy chấm trước khi kết luận.
+1. `p1_low_fps` ban đầu 26,9 < 30; sau khi bỏ các lần ghi material thừa mỗi khung thì lên 42,7 (cùng cảnh, cùng máy). Bài học: đo trước, tối ưu sau, và đừng hạ chuẩn đo.
 2. Release `v1.0.0` phải tạo bằng `gh` hoặc trên web GitHub.
 3. Ảnh `07-leaderboard.png` chụp nhầm màn Bằng chứng (xem proof).
 
