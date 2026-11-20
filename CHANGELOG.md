@@ -2,6 +2,9 @@
 
 ## Phase 1 — PRD-0 + Test Contract v1.0
 
+### Sửa
+- **Phím `A`/`D` bị đảo hướng.** Camera đứng sau Mây và nhìn về `+Z`, nên trong hệ toạ độ tay phải phía bên phải màn hình là `-X`; trước đây `D` lại gửi `+X` vào mô phỏng nên nhân vật đi sang trái. Sửa ở lớp input (`src/render/input.ts`), **không** đụng vào `src/core` vì Test Contract quy định cách `move` đổi sang hướng thế giới. Đã kiểm chứng bằng bot chơi thật ở hai góc camera: `D@yaw0 dx=−1.50`, `A@yaw0 dx=+1.50`, `D@yaw90 dz=+1.50`, `A@yaw90 dz=−1.50`.
+
 ### Thêm
 - Màn **Đêm 1 — Đảo Bến**: đảo tròn bán kính 26 m, 5 Đèn Lồng Lớn trên vành 17 m.
 - Nhân vật Mây: đi lại, nhảy, camera góc thứ ba xoay bằng chuột.

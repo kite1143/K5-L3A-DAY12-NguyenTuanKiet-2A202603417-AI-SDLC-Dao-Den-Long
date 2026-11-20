@@ -45,6 +45,8 @@ node scripts/shots.mjs http://localhost:5173/ docs/proof/phase-N/screens <seed>
 | File JSON do PowerShell ghi có BOM làm `JSON.parse` fail | `readJson` đã bỏ BOM; test CLI có ca hồi quy |
 | Point light đặt **trong** mesh nhân vật thì chỉ sáng mặt trong | Đặt đèn lồng ở phía trước **và** phía sau nhân vật |
 | Cây/đá mọc giữa sân che camera | Trang trí lớn chỉ đặt ở vành đảo (bán kính ≥ 19 m) |
+| `A`/`D` đi ngược hướng màn hình: camera nhìn về `+Z` nên **phải màn hình là `-X`** | Đảo dấu trục X ở lớp input (`src/render/input.ts`), không sửa `src/core`; bot trong `scripts/shots.mjs` có kiểm tra hướng ở hai góc camera |
+| Đo chuyển động bằng bot ở headless Chromium (SwiftShader ~5–10 fps) dễ ra 0 m nếu giữ phím quá ngắn | Giữ phím ≥ 900 ms rồi chờ thêm ≥ 450 ms trước khi đọc trạng thái |
 
 ## Quy ước commit
 

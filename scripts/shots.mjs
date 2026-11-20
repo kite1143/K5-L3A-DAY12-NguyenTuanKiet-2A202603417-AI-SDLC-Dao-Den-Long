@@ -56,6 +56,46 @@ await page.screenshot({ path: join(outDir, '02-island.png') });
 const initial = await read();
 log(`island ready: ${initial.motes.length} motes, ${initial.lanterns.length} lanterns, ${initial.timeLeftTicks / 60}s of night`);
 
+// ---- controls sanity check --------------------------------------------------
+// The camera looks along +Z, so the right-hand side of the screen is world -X.
+// D must walk towards it, A must walk away from it, at any camera yaw.
+// Headless Chromium renders through SwiftShader at a low frame rate, so hold the
+// key long enough that several frames (and therefore simulation steps) happen.
+async function measure(key, yaw) {
+  await setYaw(yaw);
+  await page.waitForTimeout(250);
+  const before = await read();
+  await page.keyboard.down(key);
+  await page.waitForTimeout(900);
+  await page.keyboard.up(key);
+  await page.waitForTimeout(450);
+  const after = await read();
+  return { dx: after.player.x - before.player.x, dz: after.player.z - before.player.z };
+}
+
+const dYaw0 = await measure('KeyD', 0);
+const aYaw0 = await measure('KeyA', 0);
+const dYaw90 = await measure('KeyD', 90);
+const aYaw90 = await measure('KeyA', 90);
+const controlsOk =
+  dYaw0.dx < -0.3 &&
+  Math.abs(dYaw0.dz) < Math.abs(dYaw0.dx) &&
+  aYaw0.dx > 0.3 &&
+  Math.abs(aYaw0.dz) < Math.abs(aYaw0.dx) &&
+  dYaw90.dz > 0.3 &&
+  Math.abs(dYaw90.dx) < Math.abs(dYaw90.dz) &&
+  aYaw90.dz < -0.3 &&
+  Math.abs(aYaw90.dx) < Math.abs(aYaw90.dz);
+log(
+  `controls: D@yaw0 dx=${dYaw0.dx.toFixed(2)} dz=${dYaw0.dz.toFixed(2)} | ` +
+    `A@yaw0 dx=${aYaw0.dx.toFixed(2)} | D@yaw90 dz=${dYaw90.dz.toFixed(2)} | ` +
+    `A@yaw90 dz=${aYaw90.dz.toFixed(2)} -> ${controlsOk ? 'OK' : 'WRONG DIRECTION'}`,
+);
+if (!controlsOk) {
+  log('CONTROLS CHECK FAILED');
+  process.exitCode = 1;
+}
+
 // ---- play: collect, deposit, keep the shades off ---------------------------
 let firstMoteShot = false;
 let firstLanternShot = false;

@@ -2,21 +2,22 @@
   "seed": "202603417",
   "transcript": [
     "intro screenshot — seed 202603417",
-    "island ready: 30 motes, 5 lanterns, 299.28333333333336s of night",
-    "first mote picked up at 0.7s",
-    "lantern lit #1 at 6.6s",
-    "pulse screenshot — shade S2 at 4.15 m",
-    "final: won / score 1346 / lanterns lit 5/5 / flames 3",
+    "island ready: 30 motes, 5 lanterns, 299.25s of night",
+    "controls: D@yaw0 dx=-1.50 dz=0.00 | A@yaw0 dx=1.50 | D@yaw90 dz=1.50 | A@yaw90 dz=-1.50 -> OK",
+    "first mote picked up at 2.8s",
+    "lantern lit #1 at 8.9s",
+    "pulse screenshot — shade S2 at 4.11 m",
+    "final: won / score 1342 / lanterns lit 5/5 / flames 3",
     "replay after won: state=playing score=0 flames=3",
     "replay check: new night starts clean",
     "HUD: flames=●●● carry=0 / 3 score=0 time=05:00 lanterns=○○○○○",
     "canvas 1440x810"
   ],
   "consoleLog": [
-    "[warning] [.WebGL-0x5d8400609400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[warning] [.WebGL-0x5d8400609400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[warning] [.WebGL-0x5d8400609400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[warning] [.WebGL-0x5d8400609400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    "[warning] [.WebGL-0x31cc00625400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x31cc00625400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x31cc00625400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x31cc00625400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
   ],
   "hud": {
     "flames": "●●●",

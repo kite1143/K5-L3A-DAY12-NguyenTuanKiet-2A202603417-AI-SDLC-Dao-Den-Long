@@ -73,8 +73,13 @@ export class Controls {
     let moveZ = 0;
     if (this.held.has('KeyW') || this.held.has('ArrowUp')) moveZ += 1;
     if (this.held.has('KeyS') || this.held.has('ArrowDown')) moveZ -= 1;
-    if (this.held.has('KeyD') || this.held.has('ArrowRight')) moveX += 1;
-    if (this.held.has('KeyA') || this.held.has('ArrowLeft')) moveX -= 1;
+    // The camera sits behind Mây looking towards +Z, so in a right-handed world
+    // the player's right hand points towards -X. D must therefore send -X (and
+    // A +X) into the simulation to walk towards the side of the screen the key
+    // is on. The contract fixes how `move` maps to world space, so the flip
+    // belongs here and never in src/core.
+    if (this.held.has('KeyA') || this.held.has('ArrowLeft')) moveX += 1;
+    if (this.held.has('KeyD') || this.held.has('ArrowRight')) moveX -= 1;
 
     const pressed = { ...this.latched };
     this.latched.jump = false;
