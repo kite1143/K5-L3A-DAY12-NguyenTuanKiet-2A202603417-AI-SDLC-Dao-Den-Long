@@ -3,7 +3,7 @@
 > Game 3D góc nhìn thứ ba. Bạn là **Mây**, người giữ đèn nhỏ tuổi của một hòn đảo giữa biển mây.
 > Đèn đã tắt, sương đen đã nuốt ánh sáng — và giờ **đèn cháy rồi vẫn cạn dầu**. Hãy giữ đủ đèn sáng cho tới bình minh, qua ba đêm, ba hòn đảo.
 
-**Video demo:** _(sẽ đính kèm Release `v1.0.0` ở Phase 4 — chưa có video trong repo)_
+**Video demo:** [docs/demo/demo.mp4](docs/demo/demo.mp4) — 45 s, 1280×720, quay tự động bằng `scripts/demo.mjs`
 
 | | |
 |---|---|

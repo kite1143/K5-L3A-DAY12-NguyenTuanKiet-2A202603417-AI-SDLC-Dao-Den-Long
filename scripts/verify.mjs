@@ -13,6 +13,7 @@
  */
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { hostname, platform, release, totalmem, cpus, arch } from 'node:os';
 import { join, relative } from 'node:path';
 
@@ -311,7 +312,17 @@ process.stdout.write('\n== artefacts ==\n');
 process.stdout.write('\n== contract ==\n');
 {
   const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
-  record('contract_version is 1.2', contract.contract_version === '1.2', contract.contract_version);
+  record('contract_version is 1.3', contract.contract_version === '1.3', contract.contract_version);
+    record(
+      'bench_cmd and soak_cmd are declared',
+      typeof contract.bench_cmd === 'string' && typeof contract.soak_cmd === 'string',
+      contract.bench_cmd ?? 'missing',
+    );
+    record(
+      'bench/soak scripts exist',
+      existsSync(join(root, 'scripts', 'bench.mjs')) && existsSync(join(root, 'scripts', 'soak.mjs')),
+      'scripts/bench.mjs + scripts/soak.mjs',
+    );
   record('tuning is fully declared', Object.values(contract.tuning).every((v) => v !== undefined), 'no undefined values');
   const help = spawnSync(process.execPath, [join('dist', 'headless', 'main.js'), '--ticks', '1'], {
     cwd: root,
