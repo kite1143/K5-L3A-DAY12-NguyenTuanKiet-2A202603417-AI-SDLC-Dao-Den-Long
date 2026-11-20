@@ -1,16 +1,17 @@
-# Đảo Đèn Lồng — Ba hòn đảo
+# Đảo Đèn Lồng — Giữ đảo sáng tới bình minh
 
 > Game 3D góc nhìn thứ ba. Bạn là **Mây**, người giữ đèn nhỏ tuổi của một hòn đảo giữa biển mây.
-> Sương đen đã nuốt hết ánh sáng: hãy gom đom đóm, thắp lại những **Đèn Lồng Lớn** và né **Bóng Mực** trước khi trời sáng — qua ba đêm, ba hòn đảo.
+> Đèn đã tắt, sương đen đã nuốt ánh sáng — và giờ **đèn cháy rồi vẫn cạn dầu**. Hãy giữ đủ đèn sáng cho tới bình minh, qua ba đêm, ba hòn đảo.
 
 **Video demo:** _(sẽ đính kèm Release `v1.0.0` ở Phase 4 — chưa có video trong repo)_
 
 | | |
 |---|---|
-| Phase hiện tại | **Phase 2 — Ticket-02, contract v1.1** |
-| Tag | `phase-2` |
-| Bằng chứng | [docs/proof/phase-2/](docs/proof/phase-2/summary.md) |
-| Spec + acceptance criteria | [docs/notes/spec-phase-2.md](docs/notes/spec-phase-2.md) |
+| Phase hiện tại | **Phase 3 — Ticket-03, contract v1.2** |
+| Tag | `phase-3` |
+| Bằng chứng | [docs/proof/phase-3/](docs/proof/phase-3/summary.md) |
+| ADR (quyết định thiết kế) | [docs/notes/adr-001-lantern-fuel.md](docs/notes/adr-001-lantern-fuel.md) |
+| Spec Phase 2 + AC | [docs/notes/spec-phase-2.md](docs/notes/spec-phase-2.md) |
 | Nhật ký AI & giả định | [docs/notes/](docs/notes/ai-journal.md) |
 
 ---
@@ -43,59 +44,70 @@ npm run start          # mở http://localhost:5173
 
 ## Ba đêm
 
-| Đêm | Đảo | Thời lượng | Đèn | Điểm nhấn |
-|---|---|---:|---:|---|
-| 1 | **Đảo Bến** — đảo tròn bán kính 40 m | 300 s | 5 | Bục nhảy không có; làm quen luật cơ bản |
-| 2 | **Đảo Cau** — hai đảo bán kính 28 m nối bằng **cầu tre**, tâm (0,0,0) và (70,0,0) | 330 s | 6 | **Bục nhảy** (14 m/s lên, 24 m/s ngang) phóng qua đảo; **Gió Lạc**; **Bùa Gió** trên cầu |
-| 3 | **Đảo Chuông** — ba tầng (0 m, 3 m ở vành 12–24 m nửa z>0, 6 m ở đĩa tâm bán kính 8 m) | 360 s | 7 | **Hai dốc** 30°/150°, **bục nhảy** lên tầng 2, **tháp chuông**, **gió mạnh** mỗi 30 s |
+| Đêm | Đảo | Thời lượng | Đèn | Ngưỡng thắng | Điểm nhấn |
+|---|---|---:|---:|---:|---|
+| 1 | **Đảo Bến** — đảo tròn bán kính 40 m | 240 s | 5 | 3/5 | Làm quen luật cơ bản |
+| 2 | **Đảo Cau** — hai đảo bán kính 28 m nối bằng **cầu tre**, tâm (0,0,0) và (70,0,0) | 270 s | 6 | 4/6 | **Bục nhảy** (14 m/s lên, 24 m/s ngang); **Gió Lạc**; **Bùa Gió** trên cầu |
+| 3 | **Đảo Chuông** — ba tầng (0 m, 3 m ở vành 12–24 m nửa z>0, 6 m ở đĩa tâm bán kính 8 m) | 300 s | 7 | 5/7 | **Hai dốc** 30°/150°, **bục nhảy** lên tầng 2, **tháp chuông**, **gió mạnh** mỗi 30 s |
 
-## Luật chơi (số liệu chuẩn contract v1.1)
+## Luật chơi (số liệu chuẩn contract v1.2)
 
 - **Di chuyển 6,0 m/s** (tăng tốc tức thời), nhảy 7,0 m/s với trọng lực −20 m/s², lướt 14 m/s trong 0,2 s.
-- **Đom đóm**: nhặt tự động khi cách ≤ 1,0 m và chênh cao ≤ 1,5 m; mang tối đa **10**. Bắt đầu 20 con, trần 30, thêm 1 con mỗi 4 giây nếu còn điểm trống.
-- **Đèn**: mỗi đèn cần **10 đom đóm**, nạp nhiều lần được và đèn nhớ tiến độ. Đứng trong **2,0 m** và nhấn `E`.
-- **Vùng an toàn**: đèn đã sáng tạo vòng bán kính **6 m**; Bóng Mực bị chặn ở mép và không gây sát thương khi ở trong.
-- **Bóng Mực**: 4,0 m/s (Đêm 3: 4,5 m/s), phát hiện 12 m, bỏ đuổi 18 m. Chạm (XZ ≤ 1,0 m, chênh cao ≤ 1,5 m) mất 1 Ngọn Lửa; bóng lùi lại 2 m trong 60 tick.
-- **Tỏa sáng**: 3 đom đóm, bán kính **5 m** tính từ **chân Mây + 0,8 m**, choáng 120 tick, 15 tick đầu đẩy lùi tổng 4 m, hồi chiêu 3 s.
-- **Rơi khỏi đảo** (Y < −10): mất 1 Ngọn Lửa và toàn bộ đom đóm, chờ 60 tick rồi hồi sinh ở điểm xuất phát với 90 tick bất tử.
-- **Gió Lạc** (Đêm 2–3): dải lụa xám xanh 7 m/s, tối đa 2 con, sinh ở tick 1200, 2400…; chỉ đuổi khi bạn mang ≥ 5 đom đóm và cách ≤ 15 m; chạm thì cướp `min(3, đang mang)` rồi bay đi. Tỏa sáng xua được nó và làm nó đánh rơi chiến lợi phẩm.
-- **Bùa Gió**: 600 tick, chạy 7,2 m/s, lướt không hồi chiêu; xuất hiện lại sau 2700 tick.
-- **Thắng** khi cả đèn của đêm cùng sáng (kể cả đúng tick hết giờ). **Thua** khi hết 3 Ngọn Lửa, hoặc hết giờ mà chưa đủ đèn.
+- **Đom đóm**: nhặt tự động khi cách ≤ 1,0 m và chênh cao ≤ 1,5 m. Bắt đầu 20 con, trần 30, thêm 1 con mỗi 4 giây nếu còn điểm trống.
+- **Sức chứa**: 10 + 2 × số lần thắp đèn thành công trong đêm, **tối đa 20** (đèn đặt sẵn bằng scenario không tính).
+- **Đèn có dầu**: tối đa **100**, hao **1/giây** khi đang sáng.
+  - Thắp lần đầu tốn **10** đom đóm; **thắp lại** đèn đã từng sáng chỉ tốn **5**.
+  - Đèn đang sáng mà chưa đầy: bấm `E` để **châm dầu**, mỗi đom đóm +10 dầu (`used = min(đang mang, ceil((100 − dầu)/10))`).
+  - Dầu về 0 ⇒ đèn **tắt**, tiến độ thắp lại về 0, nhưng đèn nhớ "đã từng sáng".
+  - Dầu < 30: đèn **nhấp nháy chậm** và **mất vùng an toàn**.
+- **Vùng an toàn**: đèn sáng có dầu ≥ 30 tạo vòng bán kính **6 m**; Bóng Mực bị chặn ở mép và không gây sát thương trong đó.
+- **Bóng Mực hút dầu**: con đang `wander` sẽ đi tới đèn **yếu gần nhất** (dầu < 30), đứng cách ≤ 2 m và hút **5 dầu/giây** (nhiều con cộng dồn). Nó bỏ hút khi Mây lại gần ≤ 6 m, khi đèn tắt, khi đèn được châm lên ≥ 30, hoặc khi bị đẩy ra.
+- **Chạm**: XZ ≤ 1,0 m và chênh cao ≤ 1,5 m ⇒ mất 1 Ngọn Lửa, rơi `floor(mang/2)` đom đóm, bất tử 90 tick.
+- **Rơi khỏi đảo** (Y < −10): mất 1 Ngọn Lửa và toàn bộ đom đóm, chờ 60 tick rồi hồi sinh ở điểm xuất phát.
+- **Gió Lạc** (Đêm 2–3) và **Bùa Gió** giữ nguyên như Phase 2 (xem [CHANGELOG](CHANGELOG.md)).
+- **Thắng**: khi **hết giờ** mà Mây còn sống **và** số đèn đang sáng ≥ `ceil(0,6 × tổng)` — Đêm 1 cần 3/5, Đêm 2 cần 4/6, Đêm 3 cần 5/7. **Không còn thắng sớm** khi thắp đủ đèn.
+- **Thua**: hết 3 Ngọn Lửa (bất kỳ lúc nào, kể cả tick cuối), hoặc hết giờ mà dưới ngưỡng.
 
 ### Cách tính điểm
 
 | Sự kiện | Điểm |
 |---|---:|
-| Mỗi đom đóm **nạp vào đèn** | +10 |
-| Thắp một Đèn Lồng Lớn | +100 |
-| Mỗi Bóng Mực trúng Tỏa Sáng | +5 |
-| **Thắng:** mỗi giây còn lại | +2 |
-| **Thắng:** mỗi Ngọn Lửa còn lại | +50 |
+| Mỗi đom đóm nạp vào đèn (thắp mới, thắp lại, châm dầu) | +5 |
+| Thắp lần đầu | +100 |
+| Thắp lại | +40 |
+| Mỗi Bóng Mực trúng Tỏa Sáng | +5 (+15 nếu nó đang hút dầu) |
+| **Bình minh (khi thắng):** mỗi đèn còn sáng | +50 + `floor(dầu)` |
+| **Bình minh (khi thắng):** mỗi Ngọn Lửa còn lại | +50 |
 
-Tổng điểm của một lượt chơi là tổng điểm các đêm đã thắng; điểm cao nhất được lưu trong trình duyệt.
+Không còn thưởng theo thời gian. Tổng điểm của một lượt chơi là tổng điểm các đêm đã thắng; điểm cao nhất lưu trong trình duyệt.
 
-## Chế độ headless (Test Contract v1.1)
+### Trợ năng
+
+Cài đặt có **"Bảng màu dễ phân biệt"** (được lưu): viền/mắt Bóng Mực chuyển `#00B3FF`, màu cảnh báo chuyển trắng kèm ⚠, và trạng thái đèn còn phân biệt được **không cần màu** — đèn tắt xẹp 20% và có vết rách, đèn sắp cạn thì nhấp nháy.
+
+## Chế độ headless (Test Contract v1.2)
 
 `game.contract.json` ở gốc repo khai báo mọi tham số và lệnh:
 
 ```bash
 node dist/headless/main.js --seed 202603417 --night 1 --ticks 600 --out out.jsonl \
-  [--scenario scenarios/03-pulse-stun.scenario.json] \
-  [--inputs  scenarios/03-pulse-stun.inputs.json] \
+  [--scenario scenarios/14-refuel.scenario.json] \
+  [--inputs  scenarios/14-refuel.inputs.json] \
   [--snapshot-every 10]
 ```
 
 - `--night` nhận **1, 2, 3**; logic chạy cố định 60 tick/giây, không cửa sổ, không GPU.
 - Mã thoát: `0` thành công, `2` file scenario/inputs sai định dạng, `1` lỗi khác.
-- Snapshot v1.1 có thêm `night`, `wind`, `player.{vel,grounded,invuln,dash_cd_s,pulse_cd_s,charm_s}`, và các mảng `motes` (kèm `kind`/`ttl_s`), `drifters`, `charms`.
-- Event mới: `dash`, `charm_picked`, `drifter_steal`, `drifter_drop`, `night_start`, `paused`, `resumed`; `player_hit` do rơi có thêm `lost`.
-- Cùng seed + cùng scenario + cùng inputs → output **giống hệt nhau**; một đêm đầy đủ 21.600 tick chạy dưới 1 giây (yêu cầu ≤ 30 s).
+- Snapshot v1.2: thêm `lanterns[].{fuel, ever_lit, relit_count}`, `player.capacity`; Bóng Mực có thêm trạng thái `drain`; `fuel` xuất 1 chữ số thập phân.
+- Scenario v1.2: `lanterns[].{lit, fuel, ever_lit}`, `player.successful_lights`, `shades[].target_lantern_id`.
+- Event mới: `refuel {lantern_id, amount, fuel}`, `lantern_out {lantern_id}`, `fuel_drain {lantern_id, shade_id, fuel}` (mỗi 60 tick khi đang hút); `lantern_lit` có thêm `relight`; `game_over.reason` có `dawn_survived`.
+- Cùng seed + cùng scenario + cùng inputs → output **giống hệt nhau**; một đêm đầy đủ 18.000 tick chạy dưới 1 giây (yêu cầu ≤ 30 s).
 
 ## Kiểm thử
 
 ```bash
-npm test        # 89 test: hợp đồng, mô phỏng, tính năng mới, CLI
-npm run verify  # build + test + 12 scenario + tất định + palette → docs/proof/<phase>/
+npm test        # 108 test: hợp đồng, mô phỏng, nhiên liệu đèn, tính năng, CLI
+npm run verify  # build + test + 18 scenario + tất định + palette → docs/proof/<phase>/
 ```
 
 Đo hiệu năng (cần cài Playwright, không nằm trong dependencies):
@@ -143,7 +155,8 @@ Những thứ thêm vào không làm đổi một dòng nào của mô phỏng h
 5. **Ông Đăng dẫn chuyện** ở đầu mỗi đêm, tiếng Việt, để ba hòn đảo có mạch.
 6. **Bùa Gió và Gió Lạc** vẽ bằng hình học thuần (dải lụa bán nguyệt, lá bùa đỏ viền vàng — đúng bảng màu chuẩn).
 7. **Mũi tên chỉ đèn gần nhất** khi nó ở ngoài khung hình, để người chơi không lạc trên Đảo Chuông ba tầng.
-8. **Đảo Bến có bến thật**: lều người giữ bến, thuyền mộc, thông, đá, nấm phát sáng — 6 prop low-poly của **Polyfork, CC BY 4.0** (xem [CREDITS](CREDITS.md)). Nhân vật Mây vẫn là hình học tự dựng để giữ đúng "nón lá có treo đèn lồng nhỏ".
+8. **Thanh dầu 3D** cạnh mỗi đèn đang sáng, đổi màu và nhấp nháy 1 Hz khi sắp cạn — để người chơi thấy được luật mới mà không phải mở HUD.
+9. **Đảo Bến có bến thật**: lều người giữ bến, thuyền mộc, thông, đá, nấm phát sáng — 6 prop low-poly của **Polyfork, CC BY 4.0** (xem [CREDITS](CREDITS.md)). Nhân vật Mây vẫn là hình học tự dựng để giữ đúng "nón lá có treo đèn lồng nhỏ".
 
 ### Vì sao asset không thể phá Test Contract
 
@@ -155,6 +168,7 @@ Những thứ thêm vào không làm đổi một dòng nào của mô phỏng h
 |---|---|---|---|
 | 1 | `phase-1` | [docs/proof/phase-1/summary.md](docs/proof/phase-1/summary.md) | 67/67 test, 8 scenario, tất định, bot chơi thắng trong trình duyệt |
 | 2 | `phase-2` | [docs/proof/phase-2/summary.md](docs/proof/phase-2/summary.md) | 89/89 test, 12 scenario, tất định, 59,7 FPS, HUD đủ, chuỗi menu→đêm→kết quả→chơi lại |
+| 3 | `phase-3` | [docs/proof/phase-3/summary.md](docs/proof/phase-3/summary.md) | 108/108 test, 18 scenario, tất định, thanh dầu + hút dầu + bình minh sống sót, chế độ mù màu |
 
 ## Giấy phép và nguồn
 

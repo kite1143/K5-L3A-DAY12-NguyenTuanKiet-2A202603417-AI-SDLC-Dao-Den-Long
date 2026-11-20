@@ -115,6 +115,8 @@ function paletteCheck() {
     drifter: '#8FA3B8',
     danger: '#FF5A5F',
     uiText: '#F5F1E6',
+    shadeRimCb: '#00B3FF',
+    dangerCb: '#FFFFFF',
   };
   const source = readFileSync(join(root, 'src', 'core', 'config.ts'), 'utf8');
   const problems = [];
@@ -165,8 +167,14 @@ function validateJsonl(text) {
         problems.push(`snapshot tick ${obj.tick}: bad state ${obj.state}`);
       }
       if (obj.wind && !('active' in obj.wind && 'dir_deg' in obj.wind)) problems.push('wind needs active + dir_deg');
-      for (const key of ['pos', 'vel', 'flames', 'carried', 'grounded', 'invuln', 'dash_cd_s', 'pulse_cd_s', 'charm_s']) {
+      for (const key of ['pos', 'vel', 'flames', 'carried', 'capacity', 'grounded', 'invuln', 'dash_cd_s', 'pulse_cd_s', 'charm_s']) {
         if (!(key in obj.player)) problems.push(`snapshot tick ${obj.tick}: player.${key} missing`);
+      }
+      for (const lantern of obj.lanterns) {
+        if (!('fuel' in lantern && 'ever_lit' in lantern && 'relit_count' in lantern)) {
+          problems.push(`lantern missing fuel/ever_lit/relit_count at tick ${obj.tick}`);
+          break;
+        }
       }
       for (const mote of obj.motes) {
         if (!('id' in mote && 'pos' in mote && 'kind' in mote && 'ttl_s' in mote)) {
@@ -175,7 +183,7 @@ function validateJsonl(text) {
         }
       }
       for (const shade of obj.shades) {
-        if (!['spawning', 'wander', 'chase', 'recoil', 'stunned'].includes(shade.state)) {
+        if (!['spawning', 'wander', 'chase', 'recoil', 'stunned', 'drain'].includes(shade.state)) {
           problems.push(`bad shade state ${shade.state}`);
           break;
         }
@@ -303,7 +311,7 @@ process.stdout.write('\n== artefacts ==\n');
 process.stdout.write('\n== contract ==\n');
 {
   const contract = JSON.parse(readFileSync(join(root, 'game.contract.json'), 'utf8'));
-  record('contract_version is 1.1', contract.contract_version === '1.1', contract.contract_version);
+  record('contract_version is 1.2', contract.contract_version === '1.2', contract.contract_version);
   record('tuning is fully declared', Object.values(contract.tuning).every((v) => v !== undefined), 'no undefined values');
   const help = spawnSync(process.execPath, [join('dist', 'headless', 'main.js'), '--ticks', '1'], {
     cwd: root,

@@ -1,0 +1,32 @@
+{
+  "seed": "202603417",
+  "transcript": [
+    "  screenshot 01-menu.png",
+    "  screenshot 02-night1-intro.png",
+    "night 1 started: seed 202603417",
+    "  controls: D dx=-4.30 A dx=4.30 -> OK",
+    "  after play: carried 1/10, lanterns lit 0/5, shades 4 (rendered 4), deposit presses 5",
+    "  screenshot 03-night1-play.png",
+    "  HUD: flames=●○○ clock=03:34 lanterns=0/5 score=25 motes=1/10 warning=false",
+    "  screenshot 04-lantern-fuel.png",
+    "  fuel bar: L1=77.7 L2=17.7 warning=true",
+    "  screenshot 05-shade-drain.png",
+    "  drain: S1 drain → L1; L1 fuel 8.5",
+    "  paused for the settings check: phase=paused",
+    "  screenshot 06-settings-colorblind.png",
+    "  screenshot 07-colorblind-gameplay.png",
+    "  colour-blind mode on: true",
+    "  screenshot 08-night3.png"
+  ],
+  "consoleLog": [],
+  "hud": {
+    "flames": "●○○",
+    "clock": "03:34",
+    "lanterns": "0/5",
+    "score": "25",
+    "meter": "1/10",
+    "slots": 10,
+    "full": 1,
+    "warning": false
+  }
+}

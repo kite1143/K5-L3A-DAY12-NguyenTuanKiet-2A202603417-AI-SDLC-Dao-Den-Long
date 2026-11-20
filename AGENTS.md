@@ -7,8 +7,8 @@ Hướng dẫn cho agent làm việc trong repo này. Ngắn, cụ thể, cập 
 ```bash
 npm install            # cài phụ thuộc
 npm run build          # typecheck + core + headless + web
-npm test               # 89 test (node:test), phải xanh trước khi commit
-npm run verify         # build + test + 12 scenario + tất định + palette → docs/proof/<phase>/
+npm test               # 108 test (node:test), phải xanh trước khi commit
+npm run verify         # build + test + 18 scenario + tất định + palette → docs/proof/<phase>/
 npm run headless -- --seed 1 --night 1 --ticks 600 --out out.jsonl [--scenario f] [--inputs f]
 npm run dev            # http://localhost:5173 (nạp lại khi sửa)
 npm run assets         # tải lại prop trong public/models (cần mạng + polyfork)
@@ -41,6 +41,8 @@ node scripts/fps.mjs http://localhost:5173/ docs/proof/phase-N/fps.json
 8. **Thứ tự 10 bước trong `stepWorld` là bắt buộc** (pause → đếm giờ → di chuyển/rơi → nhặt → đèn → vùng an toàn → tỏa sáng → di chuyển Bóng Mực/Gió Lạc → va chạm → sinh → thắng/thua). Đừng đổi thứ tự để "cho đẹp": test của ticket dựa vào nó.
 9. **Số liệu trong `src/core/config.ts` và `src/core/nights.ts` là của ticket**, không phải của mình. Muốn chỉnh cảm giác chơi thì chỉnh ở render (camera, hiệu ứng), không chỉnh `TUNING`.
 10. **Không thêm trường vào dòng `end`.** Giữ đúng `{type, ticks, state, score}` — test ẩn có thể so sánh cả object.
+11. **Dầu của đèn phải là số nguyên 1/60** (`fuelUnits`, 0…6000). Không dùng số thực cho `fuel`: hao 1/60 mỗi tick sẽ trôi sau vài nghìn tick và làm ngưỡng `< 30` lật qua lật lại. Chỉ dùng `fuelToDisplay()` khi xuất.
+12. **Luật thắng của Phase 3 là "sống tới bình minh"**, không phải "thắp hết đèn". Không được thêm lại thắng sớm; `all_lit` không còn tồn tại.
 
 ## Bẫy đã gặp (đừng lặp lại)
 
@@ -62,6 +64,9 @@ node scripts/fps.mjs http://localhost:5173/ docs/proof/phase-N/fps.json
 | Choáng Tỏa Sáng ngắn hơn 1 tick vì bị trừ ngay trong tick kích hoạt | Đặt `stateTicksLeft = PULSE_STUN_TICKS + 1` khi áp dụng, hoặc kiểm tra tick bắt đầu/kết thúc trong test |
 | Snapshot chỉ có ở các tick chia hết cho `snapshotEvery` | Test muốn xem tick cụ thể thì đặt `snapshotEvery: 1`, đừng đoán |
 | Đêm 3 có gió: người chơi đứng yên vẫn bị đẩy và có thể rơi khỏi đảo sau ~280 s | Test "chạy hết đêm" phải tắt `wind_enabled` và `random_shades`, nếu không đêm sẽ kết thúc sớm |
+| Test đèn "đầy dầu" không bao giờ thấy trạng thái đầy: hao dầu ở bước 2 chạy **trước** bước tương tác | Đừng test `fuel == 100` lúc tương tác; test bất biến "không vượt 100 và không lấy thừa đom đóm" |
+| Ngưỡng `fuel ≥ 30` chỉ đúng ở tick đầu vì mỗi tick mất 1 đơn vị | Muốn test biên thì dùng `fuel: 30.02` và kiểm tra ở tick 1 |
+| Test "chạy hết đêm" với đèn đặt sẵn: thiếu đèn thì thua `dawn` chứ không phải `won` | Đặt ít nhất `ceil(0.6 × tổng)` đèn sáng, hoặc dùng `dawnThreshold()` |
 
 ## Quy ước commit
 

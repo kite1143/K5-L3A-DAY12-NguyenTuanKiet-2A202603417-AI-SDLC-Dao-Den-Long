@@ -1,5 +1,38 @@
 # Changelog
 
+## Phase 3 — Ticket-03 "Đèn cạn dầu", contract v1.2
+
+> Change request phá vỡ tương thích. Quyết định thiết kế: [ADR-001](docs/notes/adr-001-lantern-fuel.md).
+
+### ⚠ Breaking changes
+
+1. **Đèn có nhiên liệu, `lit` không còn là trạng thái cuối.**
+   - Thêm `fuel` (0–100), `ever_lit`, `relit_count`; hao 1 fuel/giây; `fuel ≤ 0` ⇒ `lantern_out`, `deposited = 0`, đèn nhớ `ever_lit`.
+   - Bấm Tương tác ở đèn **đang sáng nhưng chưa đầy** = châm dầu: `used = min(đang mang, ceil((100 − fuel)/10))`, mỗi đom đóm +10 fuel.
+   - Đèn đã từng sáng chỉ cần **5** đom đóm để thắp lại (chưa từng sáng: 10).
+   - Dầu lưu bằng **số nguyên 1/60** (`fuelUnits`) để không trôi số thực; chỉ làm tròn 1 chữ số khi xuất snapshot.
+2. **Bóng Mực có trạng thái `drain`.** Đèn `fuel < 30` mất vùng an toàn; Bóng Mực đang `wander` đi tới đèn yếu gần nhất, đứng cách ≤ 2 m và hút 5 fuel/giây (cộng dồn nhiều con). Chuyển sang `chase` khi Mây vào ≤ 6 m, sang `wander` khi đèn tắt / fuel ≥ 30 / cách > 2 m.
+3. **Luật thắng đổi hoàn toàn.** Không còn thắng sớm khi thắp đủ đèn. Thắng khi hết giờ, còn sống, và số đèn sáng ≥ `ceil(0.6 × tổng)` (Đêm 1: 3/5, Đêm 2: 4/6, Đêm 3: 5/7); lý do mới `dawn_survived`. `all_lit` bị xoá.
+4. **Thời lượng đêm**: 240 / 270 / 300 s (trước 300/330/360).
+5. **Công thức điểm mới**: +5/đom đóm nạp (thay +10), +100 thắp lần đầu, +40 thắp lại, +5/Bóng Mực trúng tỏa sáng (+15 nếu nó đang `drain`), thưởng bình minh `+50 + floor(fuel)` mỗi đèn sáng và `+50` mỗi Ngọn Lửa. **Bỏ** thưởng thời gian và thưởng lửa cũ.
+6. **Sức chứa tăng dần**: 10 + 2 × số lần thắp thành công, tối đa 20 (đèn đặt sẵn bằng scenario không tính); đặt lại mỗi đêm.
+7. **Contract v1.2**: tuning thêm `fuel_max`, `fuel_decay_per_s`, `fuel_per_mote`, `relight_cost`, `win_ratio`, `drain_per_s`, `low_fuel_threshold`, `capacity_max`; snapshot thêm `lanterns[].{fuel, ever_lit, relit_count}`, `player.capacity`, và `drain` trong danh sách trạng thái Bóng Mực; scenario thêm `player.successful_lights`, `lanterns[].{fuel, ever_lit}`, `shades[].target_lantern_id`; event mới `refuel`, `lantern_out`, `fuel_drain`, `lantern_lit.relight`, `game_over.reason = dawn_survived`.
+
+### Thêm
+- **Chế độ mù màu** (Cài đặt, được lưu): viền Bóng Mực `#00B3FF`, màu cảnh báo `#FFFFFF` kèm ⚠; đèn tắt xẹp 20% + vết rách, đèn sắp cạn nhấp nháy 1 Hz — phân biệt được không cần màu.
+- **Thanh dầu** trên mỗi đèn đang sáng, đổi màu khi gần cạn; HUD có chip cảnh báo "Lx sắp cạn dầu"; thanh đom đóm giãn theo sức chứa hiện tại (`x/capacity`).
+- 6 scenario headless mới (13–18) cho hao dầu, châm dầu, tắt đèn, hút dầu, bình minh sống sót, sức chứa.
+
+### Test bị luật mới làm sai — đã sửa/bỏ, có lý do
+| Test cũ | Xử lý | Lý do |
+|---|---|---|
+| "lighting every lantern wins" | **bỏ**, thay bằng "surviving to dawn with enough lanterns" | Phase 3 không còn thắng sớm (`all_lit` đã bị xoá) |
+| `time_left_s` 300/330/360, `21600` tick | sửa thành 240/270/300, `18000` tick | thời lượng đêm đổi |
+| Điểm +10/đom đóm, thưởng thời gian | sửa thành +5/đom đóm, thưởng bình minh | công thức điểm mới |
+| Sức chứa cố định 10 | sửa: 10 + 2 × số lần thắng, trần 20 | luật mới |
+| Vùng an toàn luôn có | sửa: chỉ khi `fuel ≥ 30` | luật mới |
+| 5 trạng thái Bóng Mực | sửa: 6 (thêm `drain`) | luật mới |
+
 ## Phase 2 — Ticket-02, contract v1.1 ("Ba hòn đảo")
 
 ### Thay đổi (phá vỡ tương thích, theo yêu cầu)

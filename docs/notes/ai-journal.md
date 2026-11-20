@@ -12,6 +12,33 @@ token ≈ (số lượt trao đổi) × (ngữ cảnh trung bình mỗi lượt)
 
 Ngữ cảnh trung bình lấy bằng khoảng một nửa ngữ cảnh cuối phiên, vì ngữ cảnh lớn dần theo thời gian. Con số dưới đây là **ước tính**, không phải số đo — ghi để thấy mình có tiết kiệm hay không, không phải để khoe.
 
+## Phase 3 (Ticket-03, contract v1.2 — change request)
+
+**Đã nhờ AI:** đọc ticket change request, viết ADR cho mô hình trạng thái đèn mới, đổi `fuel` sang đơn vị nguyên 1/60, thêm luật châm dầu/thắp lại/tắt đèn, thêm trạng thái `drain` cho Bóng Mực, đổi luật thắng sang "sống tới bình minh", sức chứa tăng dần, công thức điểm mới, chế độ mù màu; cập nhật/xoá test cũ có ghi lý do; cập nhật render (thanh dầu, nhấp nháy, cảnh báo) và bằng chứng.
+
+**Ước tính:** ~20 lượt trao đổi, ngữ cảnh cuối phiên ~190k token, trung bình ~150k → **~3,0 triệu token vào**, **~70k token ra**. Phase này ít token hơn Phase 2 dù phá vỡ nhiều luật, vì đã có sẵn khung: spec/AC, `verify.mjs`, `shots.mjs`, bảng bẫy trong `AGENTS.md`.
+
+**Cách tiết kiệm:**
+- Viết **ADR trước** khi sửa code: phải trả lời "đèn là bình nhiên liệu hay công tắc" trước, nên không sửa đi sửa lại mô hình trạng thái.
+- Quyết định **dầu = số nguyên 1/60** ngay từ đầu, nên không phải đi truy lỗi sai số số thực sau này.
+- Chỉ đụng đúng ba tệp core (`config`, `types`, `step`) + `runner`/`scenario`; lớp render chỉ thêm thanh dầu và cảnh báo.
+
+**AI sai ở đâu — và tôi phát hiện bằng cách nào:**
+
+| Lần sai | Phát hiện nhờ | Đã sửa ở đâu |
+|---|---|---|
+| Test "đèn đầy dầu không tương tác được" fail vì hao dầu ở bước 2 chạy **trước** bước tương tác: `fuel` chưa bao giờ đúng 100 lúc bấm | `used` ra 1 thay vì 0, đọc lại thứ tự bước trong ticket | Đổi test sang bất biến "không vượt 100 / không lấy thừa"; ghi bẫy vào `AGENTS.md` |
+| Test biên `fuel = 30` fail vì mỗi tick mất 1 đơn vị → 29.98 ngay | `distance` ra 2.00 (bóng đã vào hút) thay vì 6 | Dùng `fuel: 30.02` và kiểm tra ở tick 1 |
+| Test `fuel_drain` ra 0 event vì tôi đặt đèn `fuel: 90` (đèn mạnh thì bóng không hút) | `drains.length === 0` | Đổi sang đèn yếu; clarify "chỉ hút đèn < 30" |
+| Test đo tốc độ hút ra 2.79 fuel/s vì cửa sổ đo còn dính lúc bóng đang đi bộ tới đèn | Con số không khớp 6 | Đo trong khoảng đã vào trạng thái `drain` |
+| `Object.keys().sort()` so với mảng kỳ vọng **chưa sort** | Assertion deep-equal | Sort cả hai phía |
+| Quên `player.capacity` trong danh sách trường bắt buộc của `verify.mjs` | Verify báo thiếu field | Cập nhật schema validate |
+
+**Harness rút ra sau Phase 3:**
+- Bảng bẫy trong `AGENTS.md` có thêm 4 dòng về dầu (trước/sau bước 2, ngưỡng theo tick, đèn yếu mới bị hút, đèn đặt sẵn).
+- `verify.mjs` giờ kiểm tra cả schema v1.2 (fuel/ever_lit/relit_count/capacity/`drain`), nên nếu ai quên một trường là báo ngay.
+- ADR trở thành đầu vào cho phần "Evaluation & retro" của rubric: mỗi quyết định có lý do và phương án bị loại.
+
 ## Phase 2 (Ticket-02, contract v1.1)
 
 **Đã nhờ AI:** đọc ticket, viết spec + acceptance criteria (AC-1…AC-54), viết lại toàn bộ lớp core theo số chuẩn, thêm 3 bản đồ, 3 cơ chế mới (lướt, Gió Lạc, Bùa Gió), rơi khỏi đảo, gió, pause; viết lại lớp render cho 3 đêm + HUD + menu/pause/settings + âm thanh; viết lại bộ test và bằng chứng.

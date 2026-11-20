@@ -1,0 +1,49 @@
+{
+  "measuredAt": "2026-11-20T12:51:45.119Z",
+  "renderer": "ANGLE (Intel, Intel(R) Iris(R) Xe Graphics (0x00009A49) Direct3D11 vs_5_0 ps_5_0, D3D11)",
+  "note": "Measured in Chromium with hardware WebGL (ANGLE/D3D11) at 1280x720, in-game, with the real render loop.",
+  "requiredMinFps": 30,
+  "runs": [
+    {
+      "label": "night-1",
+      "night": 1,
+      "viewport": "1280x720",
+      "seconds": 12,
+      "frames": 718,
+      "fps": 60.00284136017583,
+      "p95ms": 16.700000000000728,
+      "worstMs": 16.80000000000109
+    },
+    {
+      "label": "night-2",
+      "night": 2,
+      "viewport": "1280x720",
+      "seconds": 12,
+      "frames": 719,
+      "fps": 60.00267049437527,
+      "p95ms": 16.799999999999272,
+      "worstMs": 16.80000000000291
+    },
+    {
+      "label": "night-3",
+      "night": 3,
+      "viewport": "1280x720",
+      "seconds": 12,
+      "frames": 711,
+      "fps": 59.334551736224114,
+      "p95ms": 16.799999999995634,
+      "worstMs": 149.90000000000146
+    },
+    {
+      "label": "night-3-full-load",
+      "night": 3,
+      "viewport": "1280x720",
+      "seconds": 12,
+      "frames": 719,
+      "fps": 60.00267049437526,
+      "p95ms": 16.799999999995634,
+      "worstMs": 16.80000000000291
+    }
+  ],
+  "errors": []
+}

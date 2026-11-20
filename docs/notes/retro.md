@@ -1,5 +1,21 @@
 # Ghi chú & retro
 
+## Phase 3
+
+**Đạt:** toàn bộ Ticket-03 — 108/108 test, 18 scenario headless, tất định, thanh dầu + châm dầu + thắp lại + tắt đèn, Bóng Mực hút dầu với trạng thái `drain`, luật thắng `dawn_survived` (240/270/300 s), sức chứa tăng dần tới 20, công thức điểm mới, chế độ mù màu.
+
+**Hỏng phase trước?** Có, và **theo đúng yêu cầu**: 6 nhóm test của Phase 1–2 dựa vào luật cũ đã bị sửa hoặc bỏ, mỗi nhóm có lý do trong [CHANGELOG](../../CHANGELOG.md). Cụ thể: "thắng khi thắp hết đèn" (bỏ), thời lượng đêm (sửa), công thức điểm (sửa), sức chứa cố định (sửa), vùng an toàn luôn có (sửa), 5 trạng thái Bóng Mực (sửa thành 6). Không test nào bị `skip` âm thầm.
+
+**Điều cần chỉnh cho Phase 4:**
+1. **Video demo** phải quay được cảnh `drain` và cảnh bình minh sống sót — đó là hai thứ đặc trưng nhất của Phase 3.
+2. **Cân bằng lại độ khó**: 240 s cho 5 đèn × (10 + châm dầu) là khá căng; nếu playtest thấy quá khó thì ghi lại và **không** đổi số chuẩn (ticket quy định), chỉ ghi nhận.
+3. **Bình minh khi thắng cả 3 đêm** vẫn chưa có ảnh (giống Phase 2) — sẽ quay trong video.
+4. Cân nhắc thêm chỉ báo cho Bóng Mực đang hút dầu ở ngoài khung hình (hiện chỉ thấy khi nó trong tầm nhìn).
+
+**Cách dùng token:** ước tính ~3,0 triệu token vào / ~70k ra (xem [nhật ký AI](ai-journal.md)). Rẻ hơn Phase 2 dù thay đổi phá vỡ nhiều hơn, nhờ ADR viết trước và bộ khung kiểm chứng đã có.
+
+**Bài học:** với change request, thứ đáng viết trước không phải code mà là **mô hình trạng thái** (ADR). Câu hỏi "đèn là bình nhiên liệu hay công tắc" quyết định 80% khối lượng sửa; nếu trả lời sai thì mọi test về sau đều phải làm lại.
+
 ## Phase 2
 
 **Đạt:** toàn bộ 54 acceptance criteria của [spec Phase 2](spec-phase-2.md) — 89/89 test, 12 scenario headless, tất định, 59,7 FPS trên GPU thật, HUD đủ 7 thành phần, chuỗi menu → giới thiệu → chơi → kết quả (thua thật) → chơi lại → Đêm 2 → Đêm 3.
